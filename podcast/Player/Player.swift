@@ -1,0 +1,275 @@
+import SwiftUI
+import AVKit
+import CoreData
+
+func formatFloat(_ value: Float) -> String {
+    let formatter = NumberFormatter()
+    formatter.numberStyle = .decimal
+    formatter.minimumFractionDigits = 1  // Don't force decimal places
+    formatter.maximumFractionDigits = 2  // But show up to 2 if needed
+    
+    return formatter.string(from: NSNumber(value: value)) ?? "\(value)"
+}
+
+struct PlayerMenu<ViewModel: PlayerViewModelProtocol>: View {
+    @EnvironmentObject var viewModel: ViewModel
+    let rates: [Float] = [0.75,1.0,1.25,1.5,1.75,2.0]
+    
+    var body: some View {
+        Menu {
+            ForEach(rates, id: \.self) { rate in
+                Button {
+                    Task { viewModel.updatePlaybackRate(rate) }
+                } label: {
+                    LabeledContent {
+                        if rate == viewModel.playbackRate {
+                            Image(systemName: "checkmark")
+                        }
+                    } label: {
+                        Text("\(formatFloat(rate))x")
+                    }
+                }
+            }
+        } label: {
+            menuLabel
+        }
+    }
+    
+    private var menuLabel: some View {
+        HStack(spacing: 4) {
+            Text("\(formatFloat(viewModel.playbackRate))x")
+                .font(.system(size: 14, weight: .medium))
+                .monospacedDigit() // Ensures consistent width for numbers
+            
+            Image(systemName: "chevron.down")
+                .font(.caption2)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .background(Color.gray.opacity(0.1))
+        .cornerRadius(8)
+    }
+}
+
+struct PlayerControlsView<ViewModel: PlayerViewModelProtocol>: View {
+    @EnvironmentObject var viewModel: ViewModel
+    @EnvironmentObject var themeManager: ThemeManager
+    @State private var sliderValue: Double = 0
+    @State private var isEditing = false
+    
+    var body: some View {
+        VStack {
+            // Progress Bar
+            Slider(
+                value: $sliderValue,
+                in: 0...Double(viewModel.duration),
+                onEditingChanged: { editing in
+                    isEditing = editing
+                    if !isEditing {
+                        let seekTime = Int64(sliderValue.rounded())
+                        viewModel.seek(seconds: seekTime)
+                    }
+                }
+            )
+            .onReceive(viewModel.currentTimePublisher) { time in
+                if !isEditing {
+                    sliderValue = Double(time.seconds)
+                }
+            }
+            .tint(themeManager.selectedTheme.primaryColor)
+            .padding(.horizontal)
+            HStack {
+                Text("\(formattedTime(time: sliderValue))")
+                    .fontWeight(.semibold)
+                Spacer()
+                Text("- \(formattedTime(time: Double(viewModel.duration)-sliderValue))")
+                    .fontWeight(.semibold)
+            }
+            .padding()
+            
+            HStack {
+                Button(action: { viewModel.skipBackward(seconds: 30) }) {
+                    Image(systemName: "gobackward.30")
+                        .resizable()
+                        .frame(width: 40, height: 45 )
+                }
+                Spacer()
+                Button(action: { viewModel.playPause() }) {
+                    Image(systemName: viewModel.playerState == .playing ? "pause.fill" : "play.fill")
+                        .resizable()
+                        .frame(width: 35, height: 45 )
+                }
+                Spacer()
+                Button(action: { viewModel.skipForward(seconds: 30) }) {
+                    Image(systemName: "goforward.30")
+                        .resizable()
+                        .frame(width: 40, height: 45 )
+                }
+                
+            }
+            .padding(.leading, 75)
+            .padding(.trailing, 75)
+        }
+    }
+}
+
+
+struct PlayerImgNotes<ViewModel: PlayerViewModelProtocol>: View {
+    @EnvironmentObject var playerManager: ViewModel
+    @EnvironmentObject var themeManager: ThemeManager
+    @State private var currentPage: Int = 0
+    
+    private let spacing: CGFloat = 7
+    private let pageIndicatorTintColor = Color.gray.opacity(0.5)
+        
+    var body: some View {
+        VStack(spacing: spacing) {
+            GeometryReader { geometry in
+                TabView(selection: $currentPage) {
+                    PlayerImageHandler<ViewModel>()
+                        .environmentObject(playerManager)
+                        .tag(0)
+                        .frame(width: geometry.size.width)
+                    
+                    PlayerEpisodeDescriptionView(html: playerManager.currentEpisode?.displayDescription ?? "",
+                                                 theme: themeManager)
+                    .tag(1)
+                    .frame(width: geometry.size.width)
+                }
+                .tabViewStyle(.page(indexDisplayMode: .never))
+                .frame(height: 300)
+                .padding(.bottom, 15)
+            }
+            
+            // Page indicators
+            HStack(spacing: spacing) {
+                ForEach(0..<2, id: \.self) { index in
+                    Circle()
+                        .fill(index == currentPage ? themeManager.selectedTheme.primaryColor.opacity(0.8) : pageIndicatorTintColor)
+                        .frame(width: 8, height: 8)
+                        .onTapGesture {
+                            withAnimation {
+                                currentPage = index
+                            }
+                        }
+                }
+            }
+        }
+    }
+}
+
+struct PlayerImageHandler<ViewModel: PlayerViewModelProtocol>: View {
+    @EnvironmentObject var playerManager: ViewModel
+        
+    var body: some View {
+        if let imgData = playerManager.episodeImageData, let uIImg = UIImage(data: imgData) {
+            Image(uiImage: uIImg)
+                .resizable()
+                .frame(width: 300, height: 300)
+                .cornerRadius(25)
+        } else {
+            ProgressView()
+        }
+    }
+}
+
+
+struct AirPlayButton: UIViewRepresentable {
+    var activeTint: UIColor
+    
+    init(activeTint: UIColor = .blue) {
+        self.activeTint = activeTint
+    }
+    
+    func makeUIView(context: Context) -> UIView {
+        let routePickerView = AVRoutePickerView(frame: .zero)
+        routePickerView.prioritizesVideoDevices = false
+        routePickerView.activeTintColor = activeTint
+        
+        return routePickerView
+    }
+    
+    func updateUIView(_ uiView: UIView, context: Context) {
+        // Update the view if needed
+    }
+}
+    
+
+struct Player<ViewModel: PlayerViewModelProtocol>: View {
+    @EnvironmentObject var themeManager: ThemeManager
+    @EnvironmentObject var playerManager: ViewModel
+    
+    private var bookmarkButton: some View {
+        Button {
+            playerManager.saveBookmark()
+        } label: {
+            Image(systemName: "bookmark.square")
+                .resizable()
+                .frame(width: 30, height: 30)
+                .opacity(0.85)
+        }
+    }
+    
+    var body: some View {
+
+        Color(themeManager.selectedTheme.secondoryColor)
+            .ignoresSafeArea(.all)
+            .overlay(
+                VStack {
+                    Text(playerManager.currentEpisode?.title ?? "No episode selected").lineLimit(1)
+                        .font(.title3)
+                        .fontWeight(.medium)
+                        .padding(.leading, 10)
+                        .padding(.trailing, 10)
+                        .padding(.top, 15)
+                    
+                    Text(playerManager.currentEpisode?.podcast?.title ?? "Podcast")
+                        .font(.callout)
+                    //.fontWeight(.light)
+                        .foregroundStyle(Color(themeManager.selectedTheme.primaryColor)).opacity(0.7)
+                    
+                    PlayerImgNotes<ViewModel>()
+                        .environmentObject(playerManager)
+                    
+                    // Chapter display and list
+                    PlayerChapters<ViewModel>()
+                        .environmentObject(playerManager)
+                        .environmentObject(themeManager)
+                    
+                    // Player controls
+                    PlayerControlsView<ViewModel>().padding(30)
+                        .environmentObject(playerManager)
+                        .foregroundStyle(Color(themeManager.selectedTheme.primaryColor))
+                    
+                    // Playback rate menu
+                    HStack {
+                        PlayerMenu<ViewModel>()
+                            .environmentObject(playerManager)
+                            .foregroundStyle(Color(themeManager.selectedTheme.primaryColor))
+                        Spacer()
+                        bookmarkButton
+                    }
+                    .padding(.leading, 120)
+                    .padding(.trailing, 120)
+                                        
+                    //Text(playerManager.message)
+                    AirPlayButton(activeTint: UIColor(Color(themeManager.selectedTheme.primaryColor)))
+                        .frame(width: 120, height: 50)
+                        .padding(.top, 30)
+                        .tint(Color(themeManager.selectedTheme.primaryColor))
+                    
+                }
+                .background(Color(themeManager.selectedTheme.secondoryColor))
+                .foregroundStyle(Color(themeManager.selectedTheme.primaryColor))
+            )
+        }
+}
+
+//struct Player_Previews: PreviewProvider {
+//    
+//    static var previews: some View {
+//        Player<MockPlayerViewModel>()
+//            .environmentObject(MockPlayerViewModel(context: PersistenceController.preview.container.viewContext))
+//            .environmentObject(ThemeManager())
+//    }
+//}
