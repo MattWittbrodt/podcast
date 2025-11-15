@@ -266,7 +266,7 @@ final class PlayerViewModel: NSObject, PlayerViewModelProtocol, ObservableObject
             await MainActor.run {
                 self.episodeImageData = imgData
             }
-        } else if let imageURL = self.currentEpisode?.image {
+        } else if let imageURL = self.currentEpisode?.imageUrl {
             do {
                 let imgupdate = try await loadImageFromWeb(url: imageURL)
                 await MainActor.run {
@@ -307,9 +307,9 @@ final class PlayerViewModel: NSObject, PlayerViewModelProtocol, ObservableObject
         
         do {
             let downloadData = try await downloadDataUtils.downloadEpisodetoFile(url: episode.enclosureUrl!, episodeId: episode.downloadId)
-            if episode.downloaded == false {
-                episode.downloaded = true
-            }
+//            if episode.downloaded == false {
+//                episode.downloaded = true
+//            }
             
             // Lazy load chapters
             await loadChapters(for: episode)
@@ -345,7 +345,7 @@ final class PlayerViewModel: NSObject, PlayerViewModelProtocol, ObservableObject
             
             if self.player != nil {
                 UIApplication.shared.beginReceivingRemoteControlEvents()
-                guard let imgURL = URL(string: episode.image ?? "") else { return }
+                guard let imgURL = URL(string: episode.imageUrl ?? "") else { return }
                 let (data, _) = try await URLSession.shared.data(from: imgURL)
                 self.episodeImageData = data
             }

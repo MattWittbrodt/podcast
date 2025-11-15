@@ -12,7 +12,7 @@ struct RecentEpisodesList<ViewModel: PlayerViewModelProtocol>: View {
     //@State private var viewModel = RecentEpisodesViewModel()
     @EnvironmentObject private var themeManager: ThemeManager
     @EnvironmentObject private var playerManager: ViewModel
-    @EnvironmentObject private var persistenceManager: PersistenceManager
+    @EnvironmentObject private var dataManager: DataManager
     
     var body: some View {
         NavigationStack {
@@ -43,7 +43,7 @@ struct RecentEpisodesList<ViewModel: PlayerViewModelProtocol>: View {
     
     private var header: some View {
         HStack {
-            Text(playerManager.message)
+            //Text(playerManager.message)
             Text("Recent Episodes")
                 .font(.title)
                 .fontWeight(.medium)
@@ -66,7 +66,7 @@ struct RecentEpisodesList<ViewModel: PlayerViewModelProtocol>: View {
     }
 
     private func episodeListContent() -> some View {
-        ForEach(persistenceManager.unlistenedEpisodes) { episode in
+        ForEach(dataManager.unlistenedEpisodes) { episode in
             EpisodeListCard(episode: ObservableDisplayEpisode(episode: episode))
                 .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
                 .listRowBackground(Color.clear)

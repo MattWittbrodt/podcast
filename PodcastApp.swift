@@ -2,45 +2,43 @@
 //  PodcastApp.swift
 //  podcast
 //
-//  Created by Matt Wittbrodt on 3/31/25.
+//  Created by Matt app on 3/31/25.
 //
 
 import SwiftUI
 import AVFoundation
-import Firebase
+//import Firebase
+
+struct ContentViewFactory {
+    @MainActor static func makeContentView(persistence: PersistenceManager = PersistenceManager()) -> ContentView {
+        // 1. Create the base dependency
+        let dataManager = DataManager(persistence: persistence)
+        
+        // 2. Create the dependent object using the fully initialized dataManager
+        let discoveryManager = DiscoveryManager(dataManager: dataManager)
+        
+        // 3. Return the fully initialized ContentView
+        return ContentView(discoveryManager: discoveryManager, dataManager: dataManager)
+    }
+}
+
 
 @main
 struct PodcastApp: App {
     @StateObject private var persistenceManager = PersistenceManager()
-    //@StateObject private var playerManager = PlayerViewModel(context: PersistenceManager.viewContext)
     @StateObject private var playerManager = PlayerViewModel()
     
     init() {
-        //setupAudioInterruptionObserver(with: playerManager)
-        FirebaseApp.configure()
+        //setupAudioInterruptionObserver(with: playerManager)f
+        //FirebaseApp.configure()
         setupSharedDirectory()
         UserDefaults.standard.set(0, forKey: "com.apple.CoreData.SQLDebug")
         UserDefaults.standard.set(0, forKey: "com.apple.CoreData.ConcurrencyDebug")
     }
     
-//    private func setupAudioInterruptionObserver(with playerManager: PlayerViewModel) {
-//        NotificationCenter.default.addObserver(
-//            forName: AVAudioSession.interruptionNotification,
-//            object: nil,
-//            queue: .main
-//        ) { notification in
-//            print("Interrupt: \(notification)")
-//            // Handle audio interruptions here
-//            Task{@MainActor in
-//                playerManager.playPause()
-//            }
-//        }
-//    }
-    
     var body: some Scene {
         WindowGroup {
-            ContentView()
-                //.environment(\.managedObjectContext, persistenceController.container.viewContext)
+            ContentViewFactory.makeContentView()
                 .environmentObject(playerManager)
                 .environmentObject(persistenceManager)
                 .onAppear {

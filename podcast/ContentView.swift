@@ -8,19 +8,22 @@ import SwiftUI
 
 struct ContentView: View {
     @EnvironmentObject var playerManager: PlayerViewModel
-    @EnvironmentObject private var persistenceManager: PersistenceManager
+    @EnvironmentObject private var persistenceManagerOld: PersistenceManagerOld
     @StateObject var themeManager = ThemeManager()
     
     @State private var selectedEpisode: Episode?
     @State private var showFullScreenPlayer = false
     @State private var showMiniPlayer = false
+    //New
+    @StateObject var discoveryManager: DiscoveryManager
+    @StateObject var dataManager: DataManager
     
     var body: some View {
         ZStack(alignment: .bottom) {
             TabView {
                 RecentEpisodesList<PlayerViewModel>()
                     .environmentObject(themeManager)
-                    .environmentObject(persistenceManager)
+                    .environmentObject(dataManager)
                     .tabItem {
                         Image(systemName: "house")
                         Text("Home")
@@ -32,8 +35,7 @@ struct ContentView: View {
                 PodcastList<PlayerViewModel>()
                     .environmentObject(playerManager)
                     .environmentObject(themeManager)
-                    .environmentObject(persistenceManager)
-                    .environment(\.managedObjectContext, persistenceManager.viewContext)
+                    .environmentObject(dataManager)
                     .tabItem {
                         Image(systemName: "books.vertical")
                         Text("Podcasts")
@@ -42,7 +44,10 @@ struct ContentView: View {
                     .toolbarBackground(.visible, for: .tabBar) //<- here
                     .toolbarBackground(Color(themeManager.selectedTheme.secondoryColor), for: .tabBar)
                 
-                Searcher()
+                SearcherView()
+                    .environmentObject(themeManager)
+                    .environmentObject(dataManager)
+                    .environmentObject(discoveryManager)
                     .tabItem {
                         Image(systemName: "magnifyingglass")
                         Text("Search")
@@ -50,9 +55,7 @@ struct ContentView: View {
                     .toolbar(.visible, for: .tabBar)
                     .toolbarBackground(.visible, for: .tabBar) //<- here
                     .toolbarBackground(Color(themeManager.selectedTheme.secondoryColor), for: .tabBar)
-                    .environmentObject(themeManager)
-                    .environmentObject(persistenceManager)
-                
+     
                 BookmarksView<PlayerViewModel>()
                     .tabItem {
                         Image(systemName: "bookmark")

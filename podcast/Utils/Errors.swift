@@ -33,12 +33,6 @@ enum DownloadError: Error {
     case deleteFailed
 }
 
-enum SearcherError: Error {
-    case invalidURL(String)
-    case invalidResponse(String)
-    case decodingError(String)
-}
-
 enum RSSParserError: Error {
     case invalidUrl(String)
     case parseError(String)

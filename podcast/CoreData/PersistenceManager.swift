@@ -8,7 +8,7 @@
 import Foundation
 import CoreData
 
-final class PersistenceManager: ObservableObject {
+final class PersistenceManagerOld: ObservableObject {
     static let shared = PersistenceManager()
     let container: NSPersistentContainer
     
@@ -20,28 +20,37 @@ final class PersistenceManager: ObservableObject {
     var playlist: [Episode]
     
     init(inMemory:Bool = false) {
+        print("In memory: \(inMemory)")
+        self.playlist = []
         self.container = NSPersistentContainer(name: "UserData")
-        
+        //comprehensiveCoreDataDebug()
+        //inspectStoreDirectory()
+        //setupCoreData()
         if inMemory {
             container.persistentStoreDescriptions.first?.url = URL(fileURLWithPath: "/dev/null")
         }
         
         // Load stores synchronously for initialization
         var loadError: NSError?
-
-        self.playlist = []
+        
         Task {
             await loadUnlistenedEpisodes()
         }
         
         container.loadPersistentStores { [weak self] description, error in
             if let error = error {
-                fatalError("Core Data failed to load: \(error.localizedDescription)")
+                //fatalError("Core Data failed to load: \(error.localizedDescription)")
+                print("Core Data failed to load: \(error.localizedDescription)")
+                // Handle error gracefully instead of crashing
+                // You might want to show an alert to the user
+                // or attempt to recover
+                return
             }
             
             // Optional: Configure auto-merge for background saves
             self?.container.viewContext.automaticallyMergesChangesFromParent = true
             self?.container.viewContext.mergePolicy = NSMergeByPropertyObjectTrumpMergePolicy
+            print("setup")
         }
         
         // Verify the context is properly connected
@@ -49,13 +58,15 @@ final class PersistenceManager: ObservableObject {
             let error = loadError ?? NSError(domain: "CoreData", code: 1001, userInfo: [NSLocalizedDescriptionKey: "Failed to connect persistent store coordinator"])
             fatalError("Bad loading: \(error)")
         }
-
+        //debugPublishedDateTypes()
+        
     }
     
     func loadUnlistenedEpisodes() async {
         do {
-            unlistenedEpisodes = try await self.viewContext.perform {
-                try self.viewContext.fetch(Episode.allRecent())
+            let allEpisodes = try self.viewContext.fetch(Episode.allRecent())
+            Task { @MainActor in
+                self.unlistenedEpisodes = allEpisodes
             }
         } catch {
             print("Error fetching episodes: \(error.localizedDescription)")
@@ -67,10 +78,48 @@ final class PersistenceManager: ObservableObject {
     func performBackgroundTask(_ block: @escaping (NSManagedObjectContext) -> Void) {
         container.performBackgroundTask(block)
     }
-        
+    
     func performBackgroundTask<T>(_ block: @escaping (NSManagedObjectContext) throws -> T) async throws -> T {
         try await container.performBackgroundTask(block)
     }
+}
+
+//MARK: Subscribing to Podcast
+extension PersistenceManager {
+    
+    func subscribeToPodcast(channelData: RSSChannel, feedUrl: String) {
+        let dataPodcast = Podcast(context: container.viewContext)
+        dataPodcast.newFromRSSChannel(with: channelData, feedUrl: feedUrl)
+                
+        // Create and track episodes
+        let episodes = channelData.items.map { item -> Episode in
+            let episode = Episode(context: container.viewContext)
+            episode.newFromRssEpisode(with: item)
+            episode.podcast = dataPodcast
+            episode.listened = true
+            return episode
+        }
+
+        // Find the most recent podcast and prep for listening: download and set listened to false
+        if let mostRecent = episodes.max(by: {
+            ($1.publishedDate ?? Date.distantPast) > ($0.publishedDate ?? Date.distantPast)
+        }) {
+            mostRecent.listened = false
+//            Task {
+//                let downloadData = try await downloadDataUtils.downloadEpisodetoFile(url: mostRecent.enclosureUrl ?? "", episodeId: mostRecent.uuid?.uuidString ?? "no id")
+//                if let duration = downloadData.duration {
+//                    mostRecent.duration = duration
+//                }
+//            }
+        }
+        do {
+            try container.viewContext.save()
+        } catch {
+            print("Subscription failed: \(error)")
+            container.viewContext.rollback()
+        }
+    }
+}
     
     //MARK: - SwiftUI preview helper
 //    static var preview: PersistenceController = {
@@ -122,4 +171,3 @@ final class PersistenceManager: ObservableObject {
 //        
 //        return controller
 //    }()
-}
