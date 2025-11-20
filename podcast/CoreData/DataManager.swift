@@ -8,7 +8,6 @@
 import Foundation
 import CoreData
 
-@MainActor
 class DataManager: ObservableObject {
     let debugid = UUID()
     let persistence: PersistenceManager
@@ -17,7 +16,6 @@ class DataManager: ObservableObject {
     @Published var unlistenedEpisodes: [Episode] = [] {
         didSet {
             print("📡 unlistenedEpisodes changed to \(unlistenedEpisodes.count) items")
-            print("📡 DataManager instance: \(debugid)")
         }
     }
     
@@ -36,6 +34,22 @@ class DataManager: ObservableObject {
             print("Loading initiate data: \(unlistenedEpisodes.count) episodes")
         } catch {
             print("Error fetching podcasts")
+        }
+    }
+    
+    func handleNewEpisodes(episodes: [Episode]) {
+        // Since Episodes are classes, you may need to ensure uniqueness by objectID or guid.
+        let uniqueNewEpisodes = episodes.filter { newEpisode in
+            // Example uniqueness check using objectID (less common) or a unique identifier (GUID/url).
+            !self.unlistenedEpisodes.contains(where: { $0.guid == newEpisode.guid })
+        }
+        
+        // Update list with new episodes and then sort
+        self.unlistenedEpisodes.append(contentsOf: uniqueNewEpisodes)
+        self.unlistenedEpisodes.sort { (episode1: Episode, episode2: Episode) in
+            let date1 = episode1.publishedDate ?? Date.distantPast
+            let date2 = episode2.publishedDate ?? Date.distantPast
+            return date1 > date2
         }
     }
     
@@ -106,13 +120,12 @@ extension DataManager {
     
     func loadSuscribedPodcasts() throws -> [Podcast] {
         let podcastRequest: NSFetchRequest<Podcast> = Podcast.fetchRequest()
-        podcastRequest.sortDescriptors = [NSSortDescriptor(keyPath: \Podcast.title, ascending: true)]
+        podcastRequest.sortDescriptors = [NSSortDescriptor(keyPath: \Podcast.title_, ascending: true)]
         return try persistence.viewContext.fetch(podcastRequest)
     }
-    
 }
 
-// MARK: Data saving functions
+// MARK: Data saving/updating functions
 extension DataManager {
     func saveEpisodeToPodcast(_ episode: RSSEpisode, for podcast: Podcast) -> Episode {
         let newEpisode = Episode.create(from: episode, context: persistence.viewContext)
@@ -121,12 +134,21 @@ extension DataManager {
         return newEpisode
     }
     
-//    func saveDownload(_ episode: Episode, location: URL) {
-//        let entity = DownloadedEpisode(context: persistence.viewContext)
-//        entity.timestamp = Date()
-//        entity.filename = location.lastPathComponent
-//        print("Saved in: \(location.lastPathComponent)")
-//        entity.episode = episode
-//        try? persistence.viewContext.save()
-//    }
+    func markEpisodeAsListened(_ episode: Episode) {
+        episode.listened = true
+        unlistenedEpisodes.removeAll { listEpisode in
+            listEpisode.guid == episode.guid
+        }
+        try? persistence.viewContext.save()
+    }
+    
+    func saveEpisodeTime(_ episode: Episode, time: Double) {
+        episode.lastListened = time
+        try? persistence.viewContext.save()
+    }
+    
+    func updatePodcastRate(_ podcast: Podcast, rate: Float) {
+        podcast.playbackRate = rate
+        try? persistence.viewContext.save()
+    }
 }

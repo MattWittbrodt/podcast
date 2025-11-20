@@ -11,18 +11,18 @@ func formatFloat(_ value: Float) -> String {
     return formatter.string(from: NSNumber(value: value)) ?? "\(value)"
 }
 
-struct PlayerMenu<ViewModel: PlayerViewModelProtocol>: View {
-    @EnvironmentObject var viewModel: ViewModel
+struct PlayerMenu: View {
+    @EnvironmentObject var playbackManager: PlaybackManager
     let rates: [Float] = [0.75,1.0,1.25,1.5,1.75,2.0]
     
     var body: some View {
         Menu {
             ForEach(rates, id: \.self) { rate in
                 Button {
-                    Task { viewModel.updatePlaybackRate(rate) }
+                    Task { playbackManager.updatePlaybackRate(rate) }
                 } label: {
                     LabeledContent {
-                        if rate == viewModel.playbackRate {
+                        if rate == playbackManager.playbackRate {
                             Image(systemName: "checkmark")
                         }
                     } label: {
@@ -37,7 +37,7 @@ struct PlayerMenu<ViewModel: PlayerViewModelProtocol>: View {
     
     private var menuLabel: some View {
         HStack(spacing: 4) {
-            Text("\(formatFloat(viewModel.playbackRate))x")
+            Text("\(formatFloat(playbackManager.playbackRate))x")
                 .font(.system(size: 14, weight: .medium))
                 .monospacedDigit() // Ensures consistent width for numbers
             
@@ -51,56 +51,48 @@ struct PlayerMenu<ViewModel: PlayerViewModelProtocol>: View {
     }
 }
 
-struct PlayerControlsView<ViewModel: PlayerViewModelProtocol>: View {
-    @EnvironmentObject var viewModel: ViewModel
+struct PlayerControlsView: View {
+    @EnvironmentObject var playbackManager: PlaybackManager
     @EnvironmentObject var themeManager: ThemeManager
-    @State private var sliderValue: Double = 0
     @State private var isEditing = false
     
     var body: some View {
         VStack {
-            // Progress Bar
             Slider(
-                value: $sliderValue,
-                in: 0...Double(viewModel.duration),
-                onEditingChanged: { editing in
-                    isEditing = editing
+                value: $playbackManager.currentTime, // Binds to the current time
+                in: 0...playbackManager.duration,
+                onEditingChanged: { isEditing in
+                    playbackManager.isSeeking = isEditing
                     if !isEditing {
-                        let seekTime = Int64(sliderValue.rounded())
-                        viewModel.seek(seconds: seekTime)
+                        playbackManager.seek(to: playbackManager.currentTime)
                     }
                 }
             )
-            .onReceive(viewModel.currentTimePublisher) { time in
-                if !isEditing {
-                    sliderValue = Double(time.seconds)
-                }
-            }
             .tint(themeManager.selectedTheme.primaryColor)
             .padding(.horizontal)
             HStack {
-                Text("\(formattedTime(time: sliderValue))")
+                Text("\(playbackManager.currentTimeString)")
                     .fontWeight(.semibold)
                 Spacer()
-                Text("- \(formattedTime(time: Double(viewModel.duration)-sliderValue))")
+                Text("- \(formattedTime(time: Double(playbackManager.duration)-playbackManager.currentTime))")
                     .fontWeight(.semibold)
             }
             .padding()
             
             HStack {
-                Button(action: { viewModel.skipBackward(seconds: 30) }) {
+                Button(action: { playbackManager.skipBackward(seconds: 30) }) {
                     Image(systemName: "gobackward.30")
                         .resizable()
                         .frame(width: 40, height: 45 )
                 }
                 Spacer()
-                Button(action: { viewModel.playPause() }) {
-                    Image(systemName: viewModel.playerState == .playing ? "pause.fill" : "play.fill")
+                Button(action: { playbackManager.playPause() }) {
+                    Image(systemName: playbackManager.isPlaying ? "pause.fill" : "play.fill")
                         .resizable()
                         .frame(width: 35, height: 45 )
                 }
                 Spacer()
-                Button(action: { viewModel.skipForward(seconds: 30) }) {
+                Button(action: { playbackManager.skipForward(seconds: 30) }) {
                     Image(systemName: "goforward.30")
                         .resizable()
                         .frame(width: 40, height: 45 )
@@ -195,59 +187,56 @@ struct AirPlayButton: UIViewRepresentable {
 }
     
 
-struct Player<ViewModel: PlayerViewModelProtocol>: View {
+struct Player: View {
     @EnvironmentObject var themeManager: ThemeManager
-    @EnvironmentObject var playerManager: ViewModel
+    @EnvironmentObject var playbackManager: PlaybackManager
     
-    private var bookmarkButton: some View {
-        Button {
-            playerManager.saveBookmark()
-        } label: {
-            Image(systemName: "bookmark.square")
-                .resizable()
-                .frame(width: 30, height: 30)
-                .opacity(0.85)
-        }
-    }
+//    private var bookmarkButton: some View {
+//        Button {
+//            playerManager.saveBookmark()
+//        } label: {
+//            Image(systemName: "bookmark.square")
+//                .resizable()
+//                .frame(width: 30, height: 30)
+//                .opacity(0.85)
+//        }
+//    }
     
     var body: some View {
-
         Color(themeManager.selectedTheme.secondoryColor)
             .ignoresSafeArea(.all)
             .overlay(
                 VStack {
-                    Text(playerManager.currentEpisode?.title ?? "No episode selected").lineLimit(1)
+                    Text(playbackManager.currentEpisode?.title ?? "No episode selected").lineLimit(1)
                         .font(.title3)
                         .fontWeight(.medium)
                         .padding(.leading, 10)
                         .padding(.trailing, 10)
                         .padding(.top, 15)
                     
-                    Text(playerManager.currentEpisode?.podcast?.title ?? "Podcast")
+                    Text(playbackManager.currentEpisode?.podcast?.title ?? "Podcast")
                         .font(.callout)
-                    //.fontWeight(.light)
                         .foregroundStyle(Color(themeManager.selectedTheme.primaryColor)).opacity(0.7)
                     
-                    PlayerImgNotes<ViewModel>()
-                        .environmentObject(playerManager)
+//                    PlayerImgNotes<ViewModel>()
+//                        .environmentObject(playerManager)
                     
                     // Chapter display and list
-                    PlayerChapters<ViewModel>()
-                        .environmentObject(playerManager)
-                        .environmentObject(themeManager)
+//                    PlayerChapters<ViewModel>()
+//                        .environmentObject(playerManager)
+//                        .environmentObject(themeManager)
                     
                     // Player controls
-                    PlayerControlsView<ViewModel>().padding(30)
-                        .environmentObject(playerManager)
+                    PlayerControlsView().padding(30)
                         .foregroundStyle(Color(themeManager.selectedTheme.primaryColor))
                     
                     // Playback rate menu
                     HStack {
-                        PlayerMenu<ViewModel>()
-                            .environmentObject(playerManager)
+                        PlayerMenu()
+                            .environmentObject(playbackManager)
                             .foregroundStyle(Color(themeManager.selectedTheme.primaryColor))
                         Spacer()
-                        bookmarkButton
+                        //bookmarkButton
                     }
                     .padding(.leading, 120)
                     .padding(.trailing, 120)

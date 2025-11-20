@@ -24,7 +24,7 @@ final class PersistenceManagerOld: ObservableObject {
         self.playlist = []
         self.container = NSPersistentContainer(name: "UserData")
         //comprehensiveCoreDataDebug()
-        //inspectStoreDirectory()
+        //finspectStoreDirectory()
         //setupCoreData()
         if inMemory {
             container.persistentStoreDescriptions.first?.url = URL(fileURLWithPath: "/dev/null")

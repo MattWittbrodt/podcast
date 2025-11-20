@@ -16,16 +16,24 @@ struct ContentViewFactory {
         
         // 2. Create the dependent object using the fully initialized dataManager
         let discoveryManager = DiscoveryManager(dataManager: dataManager)
+        let downloadManager = DownloadManager(dataManager: dataManager)
+        let podcastFeedService = PodcastFeedService(dataManager: dataManager)
+        let playbackManager = PlaybackManager(downloadManager: downloadManager, dataManager: dataManager)
         
         // 3. Return the fully initialized ContentView
-        return ContentView(discoveryManager: discoveryManager, dataManager: dataManager)
+        return ContentView(
+            discoveryManager: discoveryManager,
+            downloadManager: downloadManager,
+            dataManager: dataManager,
+            feedService: podcastFeedService,
+            playbackManager: playbackManager
+        )
     }
 }
 
 
 @main
 struct PodcastApp: App {
-    @StateObject private var persistenceManager = PersistenceManager()
     @StateObject private var playerManager = PlayerViewModel()
     
     init() {
@@ -40,11 +48,10 @@ struct PodcastApp: App {
         WindowGroup {
             ContentViewFactory.makeContentView()
                 .environmentObject(playerManager)
-                .environmentObject(persistenceManager)
                 .onAppear {
                     // Set up audio session
                     do {
-                        playerManager.setupPersistenceManager(persistenceManager)
+                        //playerManager.setupPersistenceManager(persistenceManager)
                         try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
                         try AVAudioSession.sharedInstance().setActive(true)
                     } catch {

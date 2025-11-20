@@ -8,26 +8,30 @@
 import SwiftUI
 import CoreData
 
-struct RecentEpisodesList<ViewModel: PlayerViewModelProtocol>: View {
-    //@State private var viewModel = RecentEpisodesViewModel()
+struct RecentEpisodesList: View {
     @EnvironmentObject private var themeManager: ThemeManager
-    @EnvironmentObject private var playerManager: ViewModel
     @EnvironmentObject private var dataManager: DataManager
+    @EnvironmentObject private var downloadManager: DownloadManager
+    @EnvironmentObject private var playbackManager: PlaybackManager
+    
+    @Binding var showFullPlayer: Bool
+    
+    let updateEpisodes: () async -> Void
+    //@ObservedObject private var listModel: UnlistenedEpisodeList
+    
+    init(updateEpisodes: @escaping () async -> Void, showFullPlayer: Binding<Bool>) {
+        self.updateEpisodes = updateEpisodes
+        //self._listModel = ObservedObject(wrappedValue: listModel)
+        self._showFullPlayer = showFullPlayer
+    }
     
     var body: some View {
         NavigationStack {
             content
                 .background(Color(themeManager.selectedTheme.secondoryColor))
-//                .onAppear {
-//                    Task {
-//                        viewModel.setup(persistenceManager: persistenceManager)
-//                        await viewModel.loadRecentEpisodes()
-//                        await viewModel.updatePodcasts()
-//                    }
-//                }
-//                .refreshable {
-//                    await viewModel.updatePodcasts()
-//                }
+                .refreshable {
+                    await updateEpisodes()
+                }
         }
     }
     
@@ -43,15 +47,13 @@ struct RecentEpisodesList<ViewModel: PlayerViewModelProtocol>: View {
     
     private var header: some View {
         HStack {
-            //Text(playerManager.message)
             Text("Recent Episodes")
                 .font(.title)
                 .fontWeight(.medium)
             Spacer()
-//            Text("Unlistened: \(viewModel.episodes.count)")
-//                .font(.headline)
-//                .fontWeight(.light)
-            
+            Text("Unlistened: \(dataManager.unlistenedEpisodes.count)")
+                .font(.headline)
+                .fontWeight(.light)
         }
         .foregroundStyle(themeManager.selectedTheme.primaryColor)
     }
@@ -66,15 +68,15 @@ struct RecentEpisodesList<ViewModel: PlayerViewModelProtocol>: View {
     }
 
     private func episodeListContent() -> some View {
-        ForEach(dataManager.unlistenedEpisodes) { episode in
-            EpisodeListCard(episode: ObservableDisplayEpisode(episode: episode))
+        ForEach(dataManager.unlistenedEpisodes, id: \.objectID) { episode in
+            EpisodeListCard(episode: episode)
                 .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
                 .listRowBackground(Color.clear)
                 .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                     swipeActions(for: episode)
                 }
                 .onTapGesture {
-                    handleEpisodeSelection(episode)
+                   handleEpisodeSelection(episode)
                 }
         }
     }
@@ -82,10 +84,7 @@ struct RecentEpisodesList<ViewModel: PlayerViewModelProtocol>: View {
     private func swipeActions(for episode: Episode) -> some View {
         HStack {  // Using HStack instead of Group provides better type inference
             Button(action: {
-                Task { @MainActor in
-                    episode.listened = true
-//                    await viewModel.loadRecentEpisodes()
-                }
+                dataManager.markEpisodeAsListened(episode)
             }) {
                 Label("Listened", systemImage: "tray.fill")
             }
@@ -93,8 +92,7 @@ struct RecentEpisodesList<ViewModel: PlayerViewModelProtocol>: View {
             
             Button(action: {
                 Task {
-//                    await viewModel.swipeDownload(episode)
-//                    await viewModel.loadRecentEpisodes()
+                    downloadManager.startDownload(for: episode)
                 }}) {
                 Label("Download", systemImage: "square.and.arrow.down.fill")
             }
@@ -104,9 +102,8 @@ struct RecentEpisodesList<ViewModel: PlayerViewModelProtocol>: View {
     
     private func handleEpisodeSelection(_ episode: Episode) {
         Task { @MainActor in
-            await playerManager.setupPlayer(episode: episode)
-            playerManager.playPause(alwaysPlay: true)
-            playerManager.showFullPlayer = true
+            showFullPlayer = true
+            playbackManager.startPlayingEpisode(episode: episode)
         }
     }
 }

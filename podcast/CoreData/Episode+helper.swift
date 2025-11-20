@@ -131,7 +131,7 @@ extension Episode {
     }
 }
 
-extension Episode: DisplayableEpisode {
+extension Episode {
     var episodeTitle: String {
         title ?? "Title Missing"
     }
@@ -147,10 +147,6 @@ extension Episode: DisplayableEpisode {
     
     var episodeDate: Date {
         publishedDate ?? Date()
-    }
-    
-    var isDownloaded: Bool {
-        false//downloaded
     }
     
     var episodeDuration: Int16 {

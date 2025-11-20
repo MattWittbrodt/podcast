@@ -21,7 +21,7 @@ struct DownloadedData {
 class downloadDataUtils {
     
     static func getSharedDownloadsDirectory() -> URL {
-        let groupID = "group.mattwTest.podcast" // Must match your App Group
+        let groupID = "group.com.planecast.Planecast" // Must match your App Group
         let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: groupID)!
         return containerURL.appendingPathComponent("Downloads")
     }

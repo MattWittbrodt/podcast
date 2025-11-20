@@ -7,24 +7,24 @@
 
 import SwiftUI
 
-struct MiniPlayerView<ViewModel: PlayerViewModelProtocol>: View {
-    @EnvironmentObject var playerManager: ViewModel
+struct MiniPlayerView: View {
+    @EnvironmentObject var playbackManager: PlaybackManager
     
     var body: some View {
-        if let episode = playerManager.currentEpisode {
+        if let episode = playbackManager.currentEpisode {
             Button(action: {
-                playerManager.showFullPlayer = true
+                //playbackManager.showFullPlayer = true
             })
             {
                 HStack {
-                    if let image = playerManager.episodeImageData {
-                        if let idata = UIImage(data: image) {
-                            Image(uiImage: idata)
-                                .resizable()
-                                .frame(width: 45, height: 45)
-                                .cornerRadius(4)
-                        }
-                    }
+//                    if let image = playbackManager.episodeImageData {
+//                        if let idata = UIImage(data: image) {
+//                            Image(uiImage: idata)
+//                                .resizable()
+//                                .frame(width: 45, height: 45)
+//                                .cornerRadius(4)
+//                        }
+//                    }
                     
                     VStack(alignment: .leading) {
                         Text(episode.title ?? "Podcast title")
@@ -41,17 +41,16 @@ struct MiniPlayerView<ViewModel: PlayerViewModelProtocol>: View {
                     Spacer()
                     
                     Button(action: {
-                        playerManager.playPause()
+                        playbackManager.playPause()
                     }) {
-                        //let _ = print("Mini: \(playerManager.playerState)")
-                        Image(systemName: playerManager.playerState == PlayerState.playing ? "pause.fill" : "play.fill")
+                        Image(systemName: playbackManager.isPlaying ? "pause.fill" : "play.fill")
                             .padding()
                             .imageScale(.large)
                             .fontWeight(.heavy)
                     }
                     
                     Button(action: {
-                        playerManager.skipForward(seconds: 30)
+                        playbackManager.skipForward(seconds: 30)
                     })
                     {
                         Image(systemName: "30.arrow.trianglehead.clockwise")

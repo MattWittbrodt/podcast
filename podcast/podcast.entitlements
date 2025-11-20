@@ -4,7 +4,7 @@
 <dict>
 	<key>com.apple.security.application-groups</key>
 	<array>
-		<string>group.mattwTest.podcast</string>
+		<string>group.com.planecast.Planecast</string>
 	</array>
 </dict>
 </plist>

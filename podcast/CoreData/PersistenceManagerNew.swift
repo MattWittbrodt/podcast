@@ -34,6 +34,7 @@ final class PersistenceManager: ObservableObject {
             // Configure context
             self?.configureContext()
         }
+        printCoreDataLocation(container: self.container)
     }
     
     private func configureContext() {

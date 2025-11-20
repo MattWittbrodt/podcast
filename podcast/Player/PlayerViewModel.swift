@@ -56,7 +56,7 @@ extension PlayerViewModelProtocol {
 }
 
 @MainActor
-final class PlayerViewModel: NSObject, PlayerViewModelProtocol, ObservableObject {
+final class PlayerViewModel: NSObject, ObservableObject {
     @Published var message: String = ""
     
     @Published var playerState: PlayerState = .stopped
@@ -150,7 +150,6 @@ final class PlayerViewModel: NSObject, PlayerViewModelProtocol, ObservableObject
             self?.playPause()
             return .success
         }
-        
         
         commandCenter.skipForwardCommand.preferredIntervals = [30]
         commandCenter.skipBackwardCommand.isEnabled = true
@@ -312,7 +311,7 @@ final class PlayerViewModel: NSObject, PlayerViewModelProtocol, ObservableObject
 //            }
             
             // Lazy load chapters
-            await loadChapters(for: episode)
+            //await loadChapters(for: episode)
             
             await MainActor.run {
                 //self.chapters = episode.sortedChapters
