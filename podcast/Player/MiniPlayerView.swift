@@ -9,11 +9,12 @@ import SwiftUI
 
 struct MiniPlayerView: View {
     @EnvironmentObject var playbackManager: PlaybackManager
+    @Binding var showFullPlayer: Bool
     
     var body: some View {
         if let episode = playbackManager.currentEpisode {
             Button(action: {
-                //playbackManager.showFullPlayer = true
+                self.showFullPlayer = true
             })
             {
                 HStack {

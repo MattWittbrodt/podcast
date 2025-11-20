@@ -80,6 +80,8 @@ class PlaybackManager: ObservableObject {
         player?.rate = self.playbackRate
         isPlaying = true
         startProgressUpdates()
+        setupRemoteTransportControls()
+        setupNowPlayingInfo()
     }
     
     // Handles the destruction of player object
@@ -102,7 +104,7 @@ extension PlaybackManager {
             player.pause()
             isPlaying = false
         case .paused:
-            player.play()
+            player.rate = self.playbackRate
             isPlaying = true
         @unknown default:
             break
@@ -208,7 +210,7 @@ extension PlaybackManager {
         }
         
         
-        commandCenter.skipForwardCommand.preferredIntervals = [30]
+        commandCenter.skipBackwardCommand.preferredIntervals = [30]
         commandCenter.skipBackwardCommand.isEnabled = true
         commandCenter.skipBackwardCommand.addTarget { [weak self] _ in
             self?.skipBackward(seconds: 30)
