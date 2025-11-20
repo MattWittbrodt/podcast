@@ -8,10 +8,10 @@
 import Foundation
 import CoreData
 import UIKit
-
-struct FeedResponse: Codable {
-    let feed: PodcastInfo
-}
+//
+//struct FeedResponse: Codable {
+//    let feed: PodcastInfo
+//}
 
 struct EpisodeByFeedResponse: Codable {
     let items: [EpisodeInfo]

@@ -7,20 +7,34 @@
 import SwiftUI
 
 struct ContentView: View {
-    @EnvironmentObject var playerManager: PlayerViewModel
-    @EnvironmentObject private var persistenceManager: PersistenceManager
     @StateObject var themeManager = ThemeManager()
     
     @State private var selectedEpisode: Episode?
-    @State private var showFullScreenPlayer = false
+    @State private var showFullPlayer = false
     @State private var showMiniPlayer = false
+    //New
+    @StateObject var discoveryManager: DiscoveryManager
+    @StateObject var downloadManager: DownloadManager
+    @StateObject var dataManager: DataManager
+    @StateObject var feedService: PodcastFeedService
+    @StateObject var playbackManager: PlaybackManager
+    
+    func updateEpisodes() async {
+        let newEpisodes = await feedService.updateAllSubscribedPodcasts()
+        dataManager.handleNewEpisodes(episodes: newEpisodes)
+        for episode in newEpisodes {
+            downloadManager.startDownload(for: episode)
+        }
+    }
     
     var body: some View {
         ZStack(alignment: .bottom) {
             TabView {
-                RecentEpisodesList<PlayerViewModel>()
+                RecentEpisodesList(updateEpisodes: updateEpisodes,
+                                   showFullPlayer: $showFullPlayer)
                     .environmentObject(themeManager)
-                    .environmentObject(persistenceManager)
+                    .environmentObject(downloadManager)
+                    .environmentObject(dataManager)
                     .tabItem {
                         Image(systemName: "house")
                         Text("Home")
@@ -29,11 +43,8 @@ struct ContentView: View {
                     .toolbarBackground(.visible, for: .tabBar) //<- here
                     .toolbarBackground(Color(themeManager.selectedTheme.secondoryColor), for: .tabBar)
                 
-                PodcastList<PlayerViewModel>()
-                    .environmentObject(playerManager)
+                PodcastList()
                     .environmentObject(themeManager)
-                    .environmentObject(persistenceManager)
-                    .environment(\.managedObjectContext, persistenceManager.viewContext)
                     .tabItem {
                         Image(systemName: "books.vertical")
                         Text("Podcasts")
@@ -42,7 +53,9 @@ struct ContentView: View {
                     .toolbarBackground(.visible, for: .tabBar) //<- here
                     .toolbarBackground(Color(themeManager.selectedTheme.secondoryColor), for: .tabBar)
                 
-                Searcher()
+                SearcherView()
+                    .environmentObject(themeManager)
+                    .environmentObject(discoveryManager)
                     .tabItem {
                         Image(systemName: "magnifyingglass")
                         Text("Search")
@@ -50,15 +63,13 @@ struct ContentView: View {
                     .toolbar(.visible, for: .tabBar)
                     .toolbarBackground(.visible, for: .tabBar) //<- here
                     .toolbarBackground(Color(themeManager.selectedTheme.secondoryColor), for: .tabBar)
-                    .environmentObject(themeManager)
-                    .environmentObject(persistenceManager)
-                
-                BookmarksView<PlayerViewModel>()
-                    .tabItem {
-                        Image(systemName: "bookmark")
-                        Text("Bookmarks")
-                    }
-                    .environmentObject(themeManager)
+     
+//                BookmarksView()
+//                    .tabItem {
+//                        Image(systemName: "bookmark")
+//                        Text("Bookmarks")
+//                    }
+//                    .environmentObject(themeManager)
                 
                 SettingsView()
                     .tabItem {
@@ -69,10 +80,18 @@ struct ContentView: View {
                     .toolbarBackground(.visible, for: .tabBar) //<- here
                     .toolbarBackground(Color(themeManager.selectedTheme.secondoryColor), for: .tabBar)
             }
+            .environmentObject(dataManager)
+            .environmentObject(playbackManager)
             .accentColor(Color(themeManager.selectedTheme.primaryColor))
+            .onAppear {
+                Task {
+                    await updateEpisodes()
+                }
+            }
             
-            if playerManager.currentEpisode != nil {
-                MiniPlayerView<PlayerViewModel>()
+            if playbackManager.currentEpisode != nil {
+                MiniPlayerView()
+                    .environmentObject(playbackManager)
                     .transition(.move(edge: .bottom))
                     .zIndex(1)
                     .padding(.bottom, UIApplication.shared.windows.first?.safeAreaInsets.bottom == 0 ? 20 : 0)
@@ -80,12 +99,10 @@ struct ContentView: View {
             }
         }
         .ignoresSafeArea(edges: .bottom)
-        .sheet(isPresented: $playerManager.showFullPlayer) {
-            if playerManager.currentEpisode != nil {
-                Player<PlayerViewModel>()
-                    .environmentObject(playerManager)
-                    .environmentObject(themeManager)
-            }
+        .sheet(isPresented: $showFullPlayer) {
+            Player()
+                .environmentObject(playbackManager)
+                .environmentObject(themeManager)
         }
     }
 }

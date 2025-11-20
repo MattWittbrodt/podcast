@@ -28,7 +28,7 @@ struct RSSChannel: Codable {
     var podcastImageData: Data?
 }
 
-struct RSSEpisode: Identifiable, Codable, DisplayableEpisode {
+struct RSSEpisode: Identifiable, Codable {
                         
     let id = UUID()
     let episodeTitle: String
@@ -52,22 +52,8 @@ struct RSSEpisode: Identifiable, Codable, DisplayableEpisode {
         case episodeTitle, link, displayDescription, episodeDate, guid, chapters, imageUrl, episodeDuration, enclosureUrl, chaptersUrl, podcastImgData
     }
     
-    mutating func addImageData() async {
-        self.imageData = try? await loadImageFromWeb(url: imageUrl)
-    }
+//    mutating func addImageData() async {
+//        self.imageData = try? await loadImageFromWeb(url: imageUrl)
+//    }
     
-    static var example: RSSEpisode {
-        return RSSEpisode(
-            episodeTitle: "Example title",
-            link: "https://pscrb.fm/rss/p/traffic.megaphone.fm/COMG2074308637.mp3?updated=1750092267",
-            displayDescription: "Example episode description",
-            guid: "guid-999-444",
-            imageUrl: "image.com",
-            episodeDate: Date(),
-            episodeDuration: 5643,
-            chapters: nil,
-            enclosureUrl: "enclosureUrl.com",
-            chaptersUrl: nil
-        )
-    }
 }

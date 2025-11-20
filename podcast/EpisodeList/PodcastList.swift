@@ -7,10 +7,9 @@
 
 import SwiftUI
 
-struct PodcastList<ViewModel: PlayerViewModelProtocol>: View {
+struct PodcastList: View {
     @Environment(\.managedObjectContext) private var context
     @EnvironmentObject private var themeManager: ThemeManager
-    @EnvironmentObject private var playerManager: ViewModel
     @EnvironmentObject private var persistenceManager: PersistenceManager
     
     @FetchRequest(fetchRequest: Podcast.allSaved())
@@ -46,7 +45,7 @@ struct PodcastList<ViewModel: PlayerViewModelProtocol>: View {
     private func podcastListContent() -> some View {
         ForEach(podcasts) { podcast in
             NavigationLink {
-                LazyEpisodeView<ViewModel>(podcast: podcast)
+               // LazyEpisodeView<ViewModel>(podcast: podcast)
             } label: {
                 PodcastListCard(
                     title: podcast.title,

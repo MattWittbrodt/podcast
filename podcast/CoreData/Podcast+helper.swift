@@ -90,7 +90,7 @@ extension Podcast {
 extension Podcast {
     /// Configures a Podcast managed object with RSS channel data
     /// - Parameter channelData: Parsed RSS feed data
-    func configure(with channelData: RSSChannel, feedUrl: String) {
+    func newFromRSSChannel(with channelData: RSSChannel, feedUrl: String) {
         // Required properties
         self.title = channelData.title
         self.feedUrl = feedUrl
@@ -99,5 +99,20 @@ extension Podcast {
         // Optional properties with nil coalescing
         self.author = channelData.author
         
+    }
+    
+    static func create(from channel: RSSChannel, feedUrl: String, context: NSManagedObjectContext) -> Podcast {
+        let entity = Podcast(context: context)
+        entity.title = channel.title
+        entity.feedUrl = feedUrl
+        entity.imageUrl = channel.imageUrl
+        entity.podcastDescription = channel.description
+        entity.author = channel.author
+        return entity
+    }
+    
+    var episodesArray: [Episode] {
+        let set = episodes as? Set<Episode> ?? []
+        return set.sorted { $0.publishedDate ?? Date() > $1.publishedDate ?? Date() }
     }
 }

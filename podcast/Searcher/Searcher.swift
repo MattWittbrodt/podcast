@@ -7,13 +7,11 @@
 import SwiftUI
 import CoreData
 
-struct Searcher: View {
-    @Environment(\.managedObjectContext) var context
+struct SearcherView: View {
+    @EnvironmentObject private var discoveryManager: DiscoveryManager
     @EnvironmentObject private var themeManager: ThemeManager
-    @StateObject var viewModel = PodcastSearchViewModel()
     
     @State private var enteredText = ""
-    @State private var selectedItem: PodcastInfo?
     @State private var showAlert = false
     @State private var alertMessage = ""
     
@@ -85,23 +83,23 @@ struct Searcher: View {
                 .padding()
                 .foregroundStyle(themeManager.selectedTheme.primaryColor)
             
-            Button("Search") {
-                withAnimation {
-                    Task {
-                        do {
-                            let podcastInfo = try await PodcastInfo.from_rss(url: rssAdditionText)
-                            selectedItem = podcastInfo
-                        } catch {
-                            alertMessage = "\(error)"
-                            showAlert = true
-                        }
-                    }
-                    showTextField = false
-                }
-            }
-            .buttonStyle(.borderedProminent)
-            .foregroundStyle(themeManager.selectedTheme.secondoryColor)
-            .tint(themeManager.selectedTheme.primaryColor)
+//            Button("Search") {
+//                withAnimation {
+//                    Task {
+//                        do {
+//                            let podcastInfo = try await PodcastInfo.from_rss(url: rssAdditionText)
+//                            selectedItem = podcastInfo
+//                        } catch {
+//                            alertMessage = "\(error)"
+//                            showAlert = true
+//                        }
+//                    }
+//                    showTextField = false
+//                }
+//            }
+//            .buttonStyle(.borderedProminent)
+//            .foregroundStyle(themeManager.selectedTheme.secondoryColor)
+//            .tint(themeManager.selectedTheme.primaryColor)
         }
         .padding()
         .background(.thickMaterial)
@@ -123,7 +121,7 @@ struct Searcher: View {
         .padding(.vertical, 8)
         .onChange(of: enteredText) {
             Task {
-                await viewModel.searchPodcasts(searchTerm: enteredText)
+                await discoveryManager.search(term: enteredText)
             }
         }
         .background(
@@ -140,29 +138,59 @@ struct Searcher: View {
     }
     
     private var searchResultsList: some View {
-        NavigationStack {
-            List(viewModel.searchResults) { searchResult in
-                PodcastRow(searchResult: searchResult) {
-                    selectedItem = searchResult
+        List(discoveryManager.searchResults) { searchResult in
+            PodcastRow(searchResult: searchResult) {
+                Task {
+                    await handleItemSelection(searchResult)
                 }
-                .background(themeManager.selectedTheme.secondoryColor)
-                .foregroundStyle(themeManager.selectedTheme.primaryColor)
-                .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
-                .listRowBackground(Color.clear)
             }
             .background(themeManager.selectedTheme.secondoryColor)
+            .foregroundStyle(themeManager.selectedTheme.primaryColor)
+            .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
+            .listRowBackground(Color.clear)
         }
         .listStyle(.plain)
-        .sheet(item: $selectedItem) { item in
-            PodcastIntro(podcast: item)
-                .environment(\.managedObjectContext, context)
+        .sheet(item: $discoveryManager.selectedPodcast) { _ in
+            PodcastDiscoverView()
+                .environmentObject(discoveryManager)
         }
     }
+    
+    private func handleItemSelection(_ item: PodcastIndexInfo) async {
+        // Perform your operation first
+        await discoveryManager.parseRssFeed(feedUrl: item.url)
+        
+        // Then show the sheet
+        await MainActor.run {
+            discoveryManager.selectedPodcast = item
+        }
+    }
+    
+    
+//    private var searchResultsList: some View {
+//        NavigationStack {
+//            List(viewModel.searchResults) { searchResult in
+//                PodcastRow(searchResult: searchResult) {
+//                    selectedItem = searchResult
+//                }
+//                .background(themeManager.selectedTheme.secondoryColor)
+//                .foregroundStyle(themeManager.selectedTheme.primaryColor)
+//                .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
+//                .listRowBackground(Color.clear)
+//            }
+//            .background(themeManager.selectedTheme.secondoryColor)
+//        }
+//        .listStyle(.plain)
+//        .sheet(item: $selectedItem) { item in
+//            PodcastIntro(podcast: item)
+//                .environment(\.managedObjectContext, context)
+//        }
+//    }
 }
 
 // Extracted subview for better organization
 struct PodcastRow: View {
-    let searchResult: PodcastInfo
+    let searchResult: PodcastIndexInfo
     let action: () -> Void
     
     var body: some View {
@@ -177,10 +205,10 @@ struct PodcastRow: View {
     }
 }
 
-//struct TextEntryView_Previews: PreviewProvider {
-//    static var previews: some View {
-//        Searcher()
-//            .environment(\.managedObjectContext, PersistenceManager().preview.container.viewContext)
-//            .environmentObject(ThemeManager())
-//    }
-//}
+#Preview {
+    let dm = DataManager.preview
+    let discovery = DiscoveryManager(dataManager: dm)
+    SearcherView()
+        .environmentObject(discovery)
+        .environmentObject(ThemeManager())
+}

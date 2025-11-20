@@ -17,7 +17,6 @@ extension Episode {
                      episodeDescription: String,
                      publishedDate: Date,
                      enclosureUrl: String,
-                     downloaded:Bool = false,
                      imageData: Data? = nil,
                      duration: Int16,
                      lastListened: Double = 0,
@@ -27,10 +26,9 @@ extension Episode {
         
         context.performAndWait {
             self.title = title
-            self.image = image
+            self.imageUrl = image
             self.publishedDate = publishedDate
             self.enclosureUrl = enclosureUrl
-            self.downloaded = downloaded
             self.episodeDescription = episodeDescription
             self.duration = duration
             self.imageData = imageData
@@ -126,7 +124,6 @@ extension Episode {
                        episodeDescription: "No Agenda Episode 1748 - \"Brain Rot\" \"Brain Rot\" Executive Producers: Commodore Sir Onymous of Dogpatch and Lower Slobbovia</p>\n<p>Dame Becky Baroness, of the great katy prairie, protectorate of the gulf coast of texas</p>\n<p>Chap Williams</p>\n<p>Ryan Schubert Sir Scott the White Knight of Pottersville Village in Somerset, Taxachussets</p>\n<p>Baroness Sarah Ruppert</p>\n<p>Viscount Dude Named Jeff</p>\n<p>Associate Executive Producers:</p>\n<p>North Idaho Sanity Brigade Donation</p>\n<p>Anon</p>\n<p>Sir Paulie Bravo Blockman Bing",
                        publishedDate: Date(),
                        enclosureUrl: "https://op3.dev/e/mp3s.nashownotes.com/NA-1748-2025-03-20-Final.mp3",
-                       downloaded: true,
                        duration: 12632,
                        lastListened: 1234.56,
                        chaptersUrl: nil,
@@ -134,7 +131,7 @@ extension Episode {
     }
 }
 
-extension Episode: DisplayableEpisode {
+extension Episode {
     var episodeTitle: String {
         title ?? "Title Missing"
     }
@@ -150,10 +147,6 @@ extension Episode: DisplayableEpisode {
     
     var episodeDate: Date {
         publishedDate ?? Date()
-    }
-    
-    var isDownloaded: Bool {
-        downloaded
     }
     
     var episodeDuration: Int16 {
@@ -178,12 +171,13 @@ extension Episode: DisplayableEpisode {
     
 }
 
+//MARK: From RSSEpisode
 extension Episode {
     
-    func configure(with episodeData: RSSEpisode) {
+    func newFromRssEpisode(with episodeData: RSSEpisode) {
         self.uuid = UUID()
         self.title = episodeData.episodeTitle
-        self.image = episodeData.imageUrl
+        self.imageUrl = episodeData.imageUrl
         self.episodeDescription = episodeData.displayDescription
         self.publishedDate = episodeData.episodeDate
         self.enclosureUrl = episodeData.enclosureUrl
@@ -193,3 +187,38 @@ extension Episode {
         self.guid = episodeData.guid
     }
 }
+
+//MARK: From v2
+extension Episode {
+    static func create(from episode: RSSEpisode, context: NSManagedObjectContext) -> Episode {
+        let entity = Episode(context: context)
+        entity.title = episode.episodeTitle
+        entity.duration = episode.episodeDuration
+        entity.enclosureUrl = episode.enclosureUrl ?? "No Enclosure"
+        entity.chaptersUrl = episode.chaptersUrl
+        entity.episodeDescription = episode.displayDescription
+        entity.guid = episode.guid
+        entity.imageUrl = episode.imageUrl
+        entity.publishedDate = episode.episodeDate
+        return entity
+    }
+    
+    // Consolidates logic for the file name. Extension agnostic.
+    func savedFileName() -> String {
+        let episodeTitle = self.title?.replacingOccurrences(of: "/", with: "-") ?? "episode"
+        return "\(episodeTitle)-\(self.guid ?? "Default Guid")"
+    }
+    
+//    func isDownloaded() -> Bool {
+//        return self.download != nil
+//    }
+}
+
+#if DEBUG
+extension Episode {
+    static func sample(in context: NSManagedObjectContext) -> Episode {
+        print("Creating sample episode")
+        return create(from: RSSChannel.exampleEpisodes[0], context: context)
+    }
+}
+#endif

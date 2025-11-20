@@ -26,34 +26,42 @@ struct EpisodeListCardImage: View {
 }
 
 struct EpisodeListCard: View {
-    @ObservedObject var episode: ObservableDisplayEpisode
+    @EnvironmentObject var downloadManager: DownloadManager
+    @ObservedObject var episode: Episode
+    // Local state to hold the state received from the publisher
+    @State private var downloadState: DownloadState = .notDownloaded
     
     var body: some View {
         HStack{
-            EpisodeListCardImage(imageData: episode.episode.imageData ?? episode.episode.podcastImgData)
+            //EpisodeListCardImage(imageData: episode.episode.imageData ?? episode.episode.podcastImgData)
             Spacer()
             VStack(alignment: .leading) {
-                Text("\(episode.episode.episodeTitle)")
+                Text("\(episode.episodeTitle)")
                     .lineLimit(2)
                     .font(.headline)
                     .padding(.bottom, 2)
-                Text("\(episode.episode.podcastTitle)")
+                Text("\(episode.podcastTitle)")
                     .lineLimit(1)
                     .font(.subheadline)
                     .opacity(0.7)
                 HStack{
-                    Text("\(episode.episode.formattedDate)")
+                    Text("\(episode.formattedDate)")
                         .padding(.leading,3)
                     Spacer()
-                    Text("\(shortTime(seconds: episode.episode.episodeDuration-Int16(episode.episode.lastListenedTime)))")
+                    Text("\(shortTime(seconds: episode.episodeDuration-Int16(episode.lastListenedTime)))")
                         .padding(.leading,3)
-                    Image(systemName: episode.episode.isDownloaded ? "arrow.down.circle.fill":"arrow.down.circle")
-                        .padding(.trailing, 3)
-                        .opacity(0.60)
+                    DownloadStatusView(state: downloadState)
                 }
             }
         }
         .padding()
+        .onReceive(
+            downloadManager.downloadStatePublisher(for: episode.objectID,
+                                                   initialDownloadState: downloadManager.downloadFileExists(for: episode))) { state in
+            //print("✴️ Download state changed for \(String(describing: episode.title)): \(state)")
+            // Update the local @State, triggering a view refresh
+            downloadState = state
+        }
     }
     
 }

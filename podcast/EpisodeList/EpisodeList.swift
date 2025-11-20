@@ -57,7 +57,7 @@ struct ListCardView<ViewModel: PlayerViewModelProtocol>: View {
     
     var body: some View {
         
-        EpisodeListCard(episode: ObservableDisplayEpisode(episode: episode))
+        EpisodeListCard(episode: episode)
         .onTapGesture {
             Task{
                 await playerManager.setupPlayer(episode: episode)
