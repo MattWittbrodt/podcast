@@ -159,7 +159,10 @@ extension PlaybackManager {
         let interval = CMTime(seconds: 0.5, preferredTimescale: CMTimeScale(NSEC_PER_SEC))
         timeObserver = player.addPeriodicTimeObserver(forInterval: interval, queue: .main) { [weak self] time in
             Task { @MainActor in
+                // Save current time and update now playing
                 self?.currentTime = time.seconds
+                self?.updateNowPlayingInfo()
+                
                 guard let saveFrequency = self?.saveFrequency, let currentEpisode = self?.currentEpisode else { return }
                 if time.seconds - currentEpisode.lastListened > saveFrequency {
                     self?.dataManager.saveEpisodeTime(currentEpisode, time: time.seconds)
@@ -244,7 +247,24 @@ extension PlaybackManager {
         }
         nowPlayingInfo[MPNowPlayingInfoPropertyElapsedPlaybackTime] = currentTime
         nowPlayingInfo[MPMediaItemPropertyPlaybackDuration] = duration
-        //nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackRate] = playbackRate
+        nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackRate] = playbackRate
+        
+        MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
+    }
+    
+    func updateNowPlayingInfo() {
+        guard let episode = currentEpisode else { return }
+        
+        var nowPlayingInfo = [String: Any]()
+        nowPlayingInfo[MPMediaItemPropertyTitle] = episode.title
+        nowPlayingInfo[MPMediaItemPropertyArtist] = episode.podcast?.title
+        nowPlayingInfo[MPNowPlayingInfoPropertyElapsedPlaybackTime] = self.currentTime
+        nowPlayingInfo[MPMediaItemPropertyPlaybackDuration] = episode.duration
+        nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackRate] = player?.rate
+            
+//        if let data = self.episodeImageData, let image = UIImage(data: data) {
+//            nowPlayingInfo[MPMediaItemPropertyArtwork] = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
+//        }
         
         MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
     }

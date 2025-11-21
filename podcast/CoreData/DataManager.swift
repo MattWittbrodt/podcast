@@ -151,4 +151,16 @@ extension DataManager {
         podcast.playbackRate = rate
         try? persistence.viewContext.save()
     }
+    
+    func saveMainContext() {
+        self.persistence.viewContext.perform {
+            do {
+                if self.persistence.viewContext.hasChanges {
+                    try self.persistence.viewContext.save()
+                }
+            } catch {
+                print("❌ Could not save main context")
+            }
+        }
+    }
 }
