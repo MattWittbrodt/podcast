@@ -8,6 +8,7 @@
 import Foundation
 import Combine
 import CoreData
+import AVKit
 
 class DownloadManager: NSObject, ObservableObject, URLSessionDownloadDelegate {
     private let dataManager: DataManager
@@ -30,16 +31,6 @@ class DownloadManager: NSObject, ObservableObject, URLSessionDownloadDelegate {
     
     // Internal Mapping (needed for tracking task completion)
     private var taskMap: [Int: NSManagedObjectID] = [:]
-    
-//    private var downloadsDirectory: URL? {
-//        guard let groupURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: "group.com.planecast.Planecast") else {
-//            print("not found group")
-//            return nil
-//        }
-//        let downloadsURL = groupURL.appendingPathComponent("Downloads")
-//        try? FileManager.default.createDirectory(at: downloadsURL, withIntermediateDirectories: true)
-//        return downloadsURL
-//    }
     
     let downloadsDirectory: URL
     
@@ -164,6 +155,32 @@ extension DownloadManager {
 
         do {
             try fm.moveItem(at: location, to: destinationURL)
+            
+            // 2. ✅ Calculate the actual duration of the downloaded file
+            var finalDuration: Int16 = 0
+            Task { @MainActor in
+                let asset = AVURLAsset(url: destinationURL)
+                let durationCMTime = try await asset.load(.duration)
+                let durationSeconds = CMTimeGetSeconds(durationCMTime)
+                if durationSeconds.isFinite {
+                    finalDuration = Int16(durationSeconds)
+                }
+                                
+                backgroundContext.performAndWait {
+                    do {
+                        // Re-fetch the episode into the background context to ensure it's still valid
+                        let episodeToUpdate = try backgroundContext.existingObject(with: episodeId) as! Episode
+                        episodeToUpdate.duration = finalDuration
+                        try backgroundContext.save()
+                        
+                        // Since this is Core Data, you should also notify the main context of changes
+                        dataManager.saveMainContext()
+                        
+                    } catch {
+                        print("Error updating and saving episode duration: \(error)")
+                    }
+                }
+            }
 
             // 5. Dispatch UI/Combine updates to the Main Actor
             Task { @MainActor in

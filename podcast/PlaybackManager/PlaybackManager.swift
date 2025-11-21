@@ -80,6 +80,8 @@ class PlaybackManager: ObservableObject {
         player?.rate = self.playbackRate
         isPlaying = true
         startProgressUpdates()
+        setupRemoteTransportControls()
+        setupNowPlayingInfo()
     }
     
     // Handles the destruction of player object
@@ -102,7 +104,7 @@ extension PlaybackManager {
             player.pause()
             isPlaying = false
         case .paused:
-            player.play()
+            player.rate = self.playbackRate
             isPlaying = true
         @unknown default:
             break
@@ -157,7 +159,10 @@ extension PlaybackManager {
         let interval = CMTime(seconds: 0.5, preferredTimescale: CMTimeScale(NSEC_PER_SEC))
         timeObserver = player.addPeriodicTimeObserver(forInterval: interval, queue: .main) { [weak self] time in
             Task { @MainActor in
+                // Save current time and update now playing
                 self?.currentTime = time.seconds
+                self?.updateNowPlayingInfo()
+                
                 guard let saveFrequency = self?.saveFrequency, let currentEpisode = self?.currentEpisode else { return }
                 if time.seconds - currentEpisode.lastListened > saveFrequency {
                     self?.dataManager.saveEpisodeTime(currentEpisode, time: time.seconds)
@@ -208,7 +213,7 @@ extension PlaybackManager {
         }
         
         
-        commandCenter.skipForwardCommand.preferredIntervals = [30]
+        commandCenter.skipBackwardCommand.preferredIntervals = [30]
         commandCenter.skipBackwardCommand.isEnabled = true
         commandCenter.skipBackwardCommand.addTarget { [weak self] _ in
             self?.skipBackward(seconds: 30)
@@ -242,7 +247,24 @@ extension PlaybackManager {
         }
         nowPlayingInfo[MPNowPlayingInfoPropertyElapsedPlaybackTime] = currentTime
         nowPlayingInfo[MPMediaItemPropertyPlaybackDuration] = duration
-        //nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackRate] = playbackRate
+        nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackRate] = playbackRate
+        
+        MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
+    }
+    
+    func updateNowPlayingInfo() {
+        guard let episode = currentEpisode else { return }
+        
+        var nowPlayingInfo = [String: Any]()
+        nowPlayingInfo[MPMediaItemPropertyTitle] = episode.title
+        nowPlayingInfo[MPMediaItemPropertyArtist] = episode.podcast?.title
+        nowPlayingInfo[MPNowPlayingInfoPropertyElapsedPlaybackTime] = self.currentTime
+        nowPlayingInfo[MPMediaItemPropertyPlaybackDuration] = episode.duration
+        nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackRate] = player?.rate
+            
+//        if let data = self.episodeImageData, let image = UIImage(data: data) {
+//            nowPlayingInfo[MPMediaItemPropertyArtwork] = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
+//        }
         
         MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
     }

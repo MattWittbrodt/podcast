@@ -90,7 +90,7 @@ struct ContentView: View {
             }
             
             if playbackManager.currentEpisode != nil {
-                MiniPlayerView()
+                MiniPlayerView(showFullPlayer: $showFullPlayer)
                     .environmentObject(playbackManager)
                     .transition(.move(edge: .bottom))
                     .zIndex(1)
