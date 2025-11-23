@@ -205,10 +205,10 @@ struct PodcastRow: View {
     }
 }
 
-#Preview {
-    let dm = DataManager.preview
-    let discovery = DiscoveryManager(dataManager: dm)
-    SearcherView()
-        .environmentObject(discovery)
-        .environmentObject(ThemeManager())
-}
+//#Preview {
+//    let dm = DataManager.preview
+//    let discovery = DiscoveryManager(dataManager: dm)
+//    SearcherView()
+//        .environmentObject(discovery)
+//        .environmentObject(ThemeManager())
+//}

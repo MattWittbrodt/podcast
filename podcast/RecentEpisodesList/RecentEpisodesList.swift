@@ -15,14 +15,16 @@ struct RecentEpisodesList: View {
     @EnvironmentObject private var playbackManager: PlaybackManager
     
     @Binding var showFullPlayer: Bool
+    @Binding var updateMessage: String
     
     let updateEpisodes: () async -> Void
     //@ObservedObject private var listModel: UnlistenedEpisodeList
     
-    init(updateEpisodes: @escaping () async -> Void, showFullPlayer: Binding<Bool>) {
+    init(updateEpisodes: @escaping () async -> Void, showFullPlayer: Binding<Bool>, updateMessage: Binding<String>) {
         self.updateEpisodes = updateEpisodes
         //self._listModel = ObservedObject(wrappedValue: listModel)
         self._showFullPlayer = showFullPlayer
+        self._updateMessage = updateMessage
     }
     
     var body: some View {
@@ -39,6 +41,7 @@ struct RecentEpisodesList: View {
         GeometryReader { geometry in
             VStack(alignment: .leading, spacing: 16) {
                 header
+                Text(updateMessage)
                 episodeList(in: geometry)
             }
             .padding(.horizontal)

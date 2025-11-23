@@ -40,7 +40,7 @@ struct PodcastDiscoverView: View {
     }
 }
 
-#Preview {
-    PodcastDiscoverView()
-        .environmentObject(DiscoveryManager.preview)
-}
+//#Preview {
+//    PodcastDiscoverView()
+//        .environmentObject(DiscoveryManager.preview)
+//}

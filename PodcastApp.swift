@@ -31,13 +31,12 @@ struct ContentViewFactory {
     }
 }
 
-
 @main
 struct PodcastApp: App {
     @StateObject private var playerManager = PlayerViewModel()
     
     init() {
-        //setupAudioInterruptionObserver(with: playerManager)f
+        //setupAudioInterruptionObserver(with: playerManager)
         //FirebaseApp.configure()
         setupSharedDirectory()
         UserDefaults.standard.set(0, forKey: "com.apple.CoreData.SQLDebug")
@@ -51,7 +50,6 @@ struct PodcastApp: App {
                 .onAppear {
                     // Set up audio session
                     do {
-                        //playerManager.setupPersistenceManager(persistenceManager)
                         try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
                         try AVAudioSession.sharedInstance().setActive(true)
                     } catch {
