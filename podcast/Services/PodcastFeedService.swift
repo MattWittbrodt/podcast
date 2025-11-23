@@ -7,6 +7,17 @@
 
 import Foundation
 
+struct ChapterResponse: Decodable {
+    let version: String
+    let chapters: [ChapterInfo]
+}
+
+struct ChapterInfo: Hashable, Codable {
+    let startTime: Int16
+    let title: String?
+    let img: String?
+}
+
 class PodcastFeedService: ObservableObject {
     private let dataManager: DataManager
     
@@ -17,7 +28,7 @@ class PodcastFeedService: ObservableObject {
     func updateAllSubscribedPodcasts() async -> [Episode] {
         print("FeedService: starting full sync on launch")
         do {
-            let feeds = try dataManager.loadSuscribedPodcasts()
+            let feeds = try await dataManager.loadSuscribedPodcasts()
             // Returning episodes first, then downloading all later
             let newEpisodes = await withTaskGroup(of: [Episode].self, returning: [Episode].self) { group in
                 for podcast in feeds {
@@ -39,7 +50,7 @@ class PodcastFeedService: ObservableObject {
     }
 }
 
-
+// Function to fetch new items
 extension PodcastFeedService {
     private func fetchNewEpisodes(for podcast: Podcast) async -> [Episode] {
         guard let url = URL(string: podcast.feedUrl?.upgradeToHTTPS ?? "") else {return []}
@@ -57,10 +68,33 @@ extension PodcastFeedService {
                 }
                 return processedEpisodes
             }.value
+            
             return processedEpisodes
         } catch {
-            print("❌ Failed to fetch episodes for \(podcast.title ?? "unknown"): \(error)")
+            print("❌ Failed to fetch episodes for \(podcast.title): \(error)")
             return []
+        }
+    }
+    
+    // Function to fetch new chapters
+    static func fetchNewChapters(for chaptersUrl: String) async throws -> ChapterResponse? {
+        guard let url = URL(string: chaptersUrl) else {
+            throw ChapterError.badUrl(chaptersUrl)
+        }
+            
+        let decoder = JSONDecoder()
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+
+        guard let (data, _) = try? await URLSession.shared.data(for: request) else {
+            throw ChapterError.noData(chaptersUrl)
+        }
+            
+        do {
+            let decodedChapters = try decoder.decode(ChapterResponse.self, from: data)
+            return decodedChapters
+        } catch {
+            throw ChapterError.decoderError(chaptersUrl,"\(error)")
         }
     }
 }

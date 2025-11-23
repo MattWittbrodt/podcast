@@ -12,7 +12,8 @@ struct ContentView: View {
     @State private var selectedEpisode: Episode?
     @State private var showFullPlayer = false
     @State private var showMiniPlayer = false
-    //New
+    @State private var updateMessage = ""
+    
     @StateObject var discoveryManager: DiscoveryManager
     @StateObject var downloadManager: DownloadManager
     @StateObject var dataManager: DataManager
@@ -20,10 +21,23 @@ struct ContentView: View {
     @StateObject var playbackManager: PlaybackManager
     
     func updateEpisodes() async {
-        let newEpisodes = await feedService.updateAllSubscribedPodcasts()
-        dataManager.handleNewEpisodes(episodes: newEpisodes)
-        for episode in newEpisodes {
-            downloadManager.startDownload(for: episode)
+        do {
+            updateMessage = "getting new episodes..."
+            let newEpisodes = await feedService.updateAllSubscribedPodcasts()
+            
+            // Updating chapters
+            updateMessage = "updating episodes with chapters"
+            await dataManager.updateEpisodesWithChapters()
+            updateMessage = "updated episodes with chapters. now handling episodes"
+            
+            // Continue handling episodes
+            dataManager.handleNewEpisodes(episodes: newEpisodes)
+            updateMessage = "starting download"
+            for episode in newEpisodes {
+                downloadManager.startDownload(for: episode)
+            }
+        } catch {
+            print("❌ Error updating episodes: \(error)")
         }
     }
     
@@ -31,7 +45,8 @@ struct ContentView: View {
         ZStack(alignment: .bottom) {
             TabView {
                 RecentEpisodesList(updateEpisodes: updateEpisodes,
-                                   showFullPlayer: $showFullPlayer)
+                                   showFullPlayer: $showFullPlayer,
+                                   updateMessage: $updateMessage)
                     .environmentObject(themeManager)
                     .environmentObject(downloadManager)
                     .environmentObject(dataManager)

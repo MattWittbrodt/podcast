@@ -25,6 +25,8 @@ class PlaybackManager: ObservableObject {
     @Published var playbackRate: Float = 1
     @Published var isSeeking = false
     @Published var isPlaying: Bool = false
+    @Published var episodeChapters: [Chapter]? = nil
+    @Published var currentChapter: Chapter?
     
     // MARK: - Private Properties
     private var player: AVPlayer?
@@ -82,6 +84,12 @@ class PlaybackManager: ObservableObject {
         startProgressUpdates()
         setupRemoteTransportControls()
         setupNowPlayingInfo()
+        
+        if episode.chapters != nil {
+            let chapters = (episode.chapters as? Set<Chapter>)?
+                .sorted { $0.startTime < $1.startTime }
+            self.episodeChapters = chapters
+        }
     }
     
     // Handles the destruction of player object
@@ -147,6 +155,29 @@ extension PlaybackManager {
         self.playbackRate = rate
         player.rate = rate
     }
+    
+    private func getCurrentChapter(time: Int16) -> Chapter? {
+        guard let chaps = episodeChapters, !chaps.isEmpty else { return nil }
+
+        // 1. Find the index where the start time is GREATER than the current time.
+        // This is the index of the *next* chapter.
+        let nextChapterIndex = chaps.firstIndex { $0.startTime > time }
+        
+        // Checking if the time is in the array. If not, its the last item
+        let currentChapterIndex: Int
+        if let nextIndex = nextChapterIndex {
+            currentChapterIndex = nextIndex - 1
+        } else {
+            currentChapterIndex = chaps.count - 1
+        }
+        
+        // Playback time is before first chapter time
+        guard currentChapterIndex >= 0 else {
+            return nil
+        }
+        
+        return chaps[currentChapterIndex]
+    }
 }
 
 // MARK: Monitoring player state
@@ -162,6 +193,14 @@ extension PlaybackManager {
                 // Save current time and update now playing
                 self?.currentTime = time.seconds
                 self?.updateNowPlayingInfo()
+                
+                // Check for chapters updates
+                if self?.episodeChapters != nil {
+                    let potentialNewChapter = self?.getCurrentChapter(time: Int16(time.seconds))
+                    if potentialNewChapter != self?.currentChapter {
+                        self?.currentChapter = potentialNewChapter
+                    }
+                }
                 
                 guard let saveFrequency = self?.saveFrequency, let currentEpisode = self?.currentEpisode else { return }
                 if time.seconds - currentEpisode.lastListened > saveFrequency {

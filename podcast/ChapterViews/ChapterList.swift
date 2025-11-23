@@ -7,14 +7,15 @@
 
 import SwiftUI
 
-struct PlayerChapters<ViewModel: PlayerViewModelProtocol>: View {
-    @EnvironmentObject var playerManager: ViewModel
+struct PlayerChapters: View {
+    @EnvironmentObject var playbackManager: PlaybackManager
     @EnvironmentObject var themeManager: ThemeManager
     @State private var showSheet = false
     
     var body: some View {
-        if let chapter = playerManager.currentChapter,
-           let chapters = playerManager.chapters {
+        if let chapters = playbackManager.episodeChapters,
+                   let chapter = playbackManager.currentChapter {
+            //let _ = print("Chapter title: \(chapter.title)")
             Text("\(chapter.title ?? "Missing title")")
                 .onTapGesture { showSheet = true }
                 .sheet(isPresented: $showSheet) {
@@ -22,7 +23,7 @@ struct PlayerChapters<ViewModel: PlayerViewModelProtocol>: View {
                         chapters: chapters,
                         currentChapterStartTime: chapter.startTime,
                         onChapterSelected: { time in
-                            playerManager.seek(seconds: Int64(time))
+                            playbackManager.seek(seconds: Int64(time))
                         }
                     )
                     .environmentObject(themeManager)

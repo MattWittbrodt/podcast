@@ -8,7 +8,13 @@
 import Foundation
 import CoreData
 
-class DataManager: ObservableObject {
+enum DataManagerError: Error {
+    case episodeNotFound
+    case chapterCreationError(Error)
+}
+
+@MainActor
+class DataManager: NSObject, ObservableObject {
     let debugid = UUID()
     let persistence: PersistenceManager
     
@@ -19,8 +25,12 @@ class DataManager: ObservableObject {
         }
     }
     
+    // For chapter updates. pushing to main thread
+    typealias ChapterUpdateCompletion = @MainActor (Result<[Chapter]?, Error>) -> Void
+    
     init(persistence: PersistenceManager) {
         self.persistence = persistence
+        super.init()
         loadInitialData()
     }
     
@@ -38,9 +48,7 @@ class DataManager: ObservableObject {
     }
     
     func handleNewEpisodes(episodes: [Episode]) {
-        // Since Episodes are classes, you may need to ensure uniqueness by objectID or guid.
         let uniqueNewEpisodes = episodes.filter { newEpisode in
-            // Example uniqueness check using objectID (less common) or a unique identifier (GUID/url).
             !self.unlistenedEpisodes.contains(where: { $0.guid == newEpisode.guid })
         }
         
@@ -118,6 +126,20 @@ extension DataManager {
         return try persistence.viewContext.fetch(episodeRequest)
     }
     
+    // Gets episodes with chapters to look for updates
+    func loadUnlistenedEpisodesWithChapters() throws -> [Episode] {
+        let fetchRequest: NSFetchRequest<Episode> = Episode.fetchRequest()
+        let unlistenedPredicate = NSPredicate(format: "listened == NO")
+        let chaptersUrlPredicate = NSPredicate(format: "chaptersUrl != NULL")
+        let compoundPredicate = NSCompoundPredicate(
+            type: .and,
+            subpredicates: [unlistenedPredicate, chaptersUrlPredicate]
+        )
+        fetchRequest.predicate = compoundPredicate
+        fetchRequest.sortDescriptors = [NSSortDescriptor(keyPath: \Episode.publishedDate, ascending: false)]
+        return try persistence.viewContext.fetch(fetchRequest)
+    }
+    
     func loadSuscribedPodcasts() throws -> [Podcast] {
         let podcastRequest: NSFetchRequest<Podcast> = Podcast.fetchRequest()
         podcastRequest.sortDescriptors = [NSSortDescriptor(keyPath: \Podcast.title_, ascending: true)]
@@ -160,6 +182,69 @@ extension DataManager {
                 }
             } catch {
                 print("❌ Could not save main context")
+            }
+        }
+    }
+}
+
+//MARK: Chapter saving functions
+extension DataManager {
+    
+    func updateEpisodesWithChapters() async {
+        do {
+            let chapterEpisodes = try self.loadUnlistenedEpisodesWithChapters()
+            if !chapterEpisodes.isEmpty {
+                print("Found \(chapterEpisodes.count) episodes with chapters to link...")
+                for ep in chapterEpisodes {
+                    do {
+                        guard let chaptersUrl = ep.chaptersUrl,
+                              let decodedChapters = try await PodcastFeedService.fetchNewChapters(for: chaptersUrl) else { continue }
+                        try await self.updateChapters(for: ep.objectID, with: decodedChapters.chapters)
+                    } catch {
+                        print("Failed to get chapters for: \(ep.title ?? "podcast title missing")")
+                    }
+                }
+            }
+        } catch {
+            print("Overall error: \(error)")
+        }
+    }
+    
+    func updateChapters(for episodeID: NSManagedObjectID, with chapterInfos: [ChapterInfo]) async throws {
+        
+        Task.detached {
+            
+            // Create a new, private context for this single transaction
+            let backgroundContext = await self.persistence.container.newBackgroundContext()
+            
+            // Perform all work on the context's private queue
+            try await backgroundContext.perform {
+                
+                // 1. Fetch the necessary parent object SAFELY in THIS context
+                guard let episodeInContext = backgroundContext.object(with: episodeID) as? Episode else {
+                    throw DataManagerError.episodeNotFound
+                }
+                
+                // If chapter count is the same, no need to go further
+                if episodeInContext.chapters?.count == chapterInfos.count {
+                    return
+                }
+                
+                episodeInContext.chapters = nil
+                print("removed chapters for: \(episodeInContext.title ?? "title missing")")
+                
+                // --- 3. Create, Map, and Link New Chapters ---
+                for chapterInfo in chapterInfos {
+                    let chapter = Chapter.fromWeb(chapter: chapterInfo, context: backgroundContext)
+                    
+                    // 🔥 CRITICAL: Link the required parent immediately to satisfy validation (Code 1550)
+                    chapter.episode = episodeInContext
+                }
+                
+                // --- 4. Final Save (The only I/O operation) ---
+                // This is the only point where the database is touched,
+                // and it happens off the main thread.
+                try backgroundContext.save()
             }
         }
     }

@@ -357,51 +357,51 @@ final class PlayerViewModel: NSObject, ObservableObject {
     }
     
     // This chapter will check for new chapters and load existing
-    private func loadChapters(for episode: Episode) async {
-        guard _chapters == nil else { return }
-        guard let context = self.context else { return }
-        guard let chaptersUrl = episode.chaptersUrl else { return }
-        
-        let fetchRequest: NSFetchRequest<Chapter> = Chapter.fetchRequest()
-        fetchRequest.predicate = NSPredicate(format: "episode == %@", episode)
-        fetchRequest.sortDescriptors = [NSSortDescriptor(key: "startTime", ascending: true)]
-        fetchRequest.fetchBatchSize = 20 // Load in batches
-        
-        do {
-            let chapters = try context.fetch(fetchRequest)
-            let decoded = try await decodeChapters(urlString: chaptersUrl)
-            // If chapter count doesn't match, start processing
-            var newChapters: [Chapter] = []
-            if chapters.count != decoded.chapters.count {
-                // Delete the existing chapters then process new ones
-                for chapter in chapters {
-                    context.delete(chapter)
-                }
-                for chapter in decoded.chapters {
-                    let mapped = Chapter.fromWeb(chapter: chapter, context: context)
-                    var imgData: Data?
-                    if let imgUrl = mapped.imageUrl {
-                        imgData = try await loadImageFromWeb(url: imgUrl)
-                    }
-                    mapped.imageData = imgData
-                    mapped.episode = episode
-                    newChapters.append(mapped)
-                }
-                try context.save()
-                
-                await MainActor.run {
-                    _chapters = newChapters
-                }
-            } else {
-                await MainActor.run {
-                    _chapters = chapters
-                }
-            }
-        } catch {
-            print("error creating chapters: \(error)")
-            _chapters = []
-        }
-    }
+//    private func loadChapters(for episode: Episode) async {
+//        guard _chapters == nil else { return }
+//        guard let context = self.context else { return }
+//        guard let chaptersUrl = episode.chaptersUrl else { return }
+//        
+//        let fetchRequest: NSFetchRequest<Chapter> = Chapter.fetchRequest()
+//        fetchRequest.predicate = NSPredicate(format: "episode == %@", episode)
+//        fetchRequest.sortDescriptors = [NSSortDescriptor(key: "startTime", ascending: true)]
+//        fetchRequest.fetchBatchSize = 20 // Load in batches
+//        
+//        do {
+//            let chapters = try context.fetch(fetchRequest)
+//            let decoded = try await decodeChapters(urlString: chaptersUrl)
+//            // If chapter count doesn't match, start processing
+//            var newChapters: [Chapter] = []
+//            if chapters.count != decoded.chapters.count {
+//                // Delete the existing chapters then process new ones
+//                for chapter in chapters {
+//                    context.delete(chapter)
+//                }
+//                for chapter in decoded.chapters {
+//                    let mapped = Chapter.fromWeb(chapter: chapter, context: context)
+//                    var imgData: Data?
+//                    if let imgUrl = mapped.imageUrl {
+//                        imgData = try await loadImageFromWeb(url: imgUrl)
+//                    }
+//                    mapped.imageData = imgData
+//                    mapped.episode = episode
+//                    newChapters.append(mapped)
+//                }
+//                try context.save()
+//                
+//                await MainActor.run {
+//                    _chapters = newChapters
+//                }
+//            } else {
+//                await MainActor.run {
+//                    _chapters = chapters
+//                }
+//            }
+//        } catch {
+//            print("error creating chapters: \(error)")
+//            _chapters = []
+//        }
+//    }
         
     func playPause(alwaysPlay: Bool = false) {
         guard let player = player else { return }

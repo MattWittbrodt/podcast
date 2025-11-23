@@ -61,7 +61,6 @@ class DownloadManager: NSObject, ObservableObject, URLSessionDownloadDelegate {
         }
         
         self.downloadsDirectory = url
-        print("!!!! DOWNLOAD DIR: \(self.downloadsDirectory)")
         super.init()
     }
 }

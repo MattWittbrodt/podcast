@@ -222,9 +222,9 @@ struct Player: View {
 //                        .environmentObject(playerManager)
                     
                     // Chapter display and list
-//                    PlayerChapters<ViewModel>()
-//                        .environmentObject(playerManager)
-//                        .environmentObject(themeManager)
+                    PlayerChapters()
+                        .environmentObject(playbackManager)
+                        .environmentObject(themeManager)
                     
                     // Player controls
                     PlayerControlsView().padding(30)
