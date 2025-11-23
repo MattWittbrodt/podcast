@@ -27,13 +27,15 @@ extension Chapter {
     }
     
     static func fromWeb(chapter: ChapterInfo, context: NSManagedObjectContext) -> Chapter {
-        return Chapter(
-            imageData: nil,
-            imageUrl: chapter.img,
-            startTime: Int16(chapter.startTime),
-            title: chapter.title,
-            context: context
-        )
+        
+        let entity = NSEntityDescription.entity(forEntityName: "Chapter", in: context)!
+        let chapterObj = Chapter(entity: entity, insertInto: context)
+        
+        chapterObj.imageUrl = chapter.img
+        chapterObj.startTime = Int16(chapter.startTime)
+        chapterObj.title = chapter.title
+        
+        return chapterObj
     }
     
 //    static var example: Chapter {

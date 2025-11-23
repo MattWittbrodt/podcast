@@ -76,34 +76,6 @@ extension Episode {
         return request
     }
     
-    // Updates chapters by first checking version
-    func updateChapters(context: NSManagedObjectContext) async throws {
-        if let url = self.chaptersUrl {
-            do {
-                let decoded = try await decodeChapters(urlString: url)
-                
-                guard decoded.chapters.count != self.chapter?.count ?? 0 else {
-                    return
-                }
-                
-                // Remove current chapters before adding new ones
-                if let chapters = self.chapter as? Set<Chapter> {
-                    for chapter in chapters {
-                        context.delete(chapter)
-                    }
-                }
-                
-                for chapter in decoded.chapters {
-                    let mapped = await Chapter.fromWeb(chapter: chapter, context: context)
-                    mapped.episode = self
-                }
-                try? context.save()
-            } catch {
-                throw error
-            }
-        }
-    }
-    
     static func handleListened(episode: Episode) async -> downloadDataResponse {
         episode.listened = true
         return await downloadDataUtils.deleteDownloadedFile(episodeId: episode.downloadId)
@@ -111,7 +83,7 @@ extension Episode {
     
     // Sorted chapters
     var sortedChapters: [Chapter] {
-        guard let chapters = self.chapter as? Set<Chapter> else {
+        guard let chapters = self.chapters as? Set<Chapter> else {
             return []
         }
         return chapters.sorted { $0.startTime < $1.startTime }

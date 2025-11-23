@@ -10,7 +10,7 @@
         <attribute name="imageUrl" optional="YES" attributeType="String"/>
         <attribute name="startTime" optional="YES" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
         <attribute name="title" optional="YES" attributeType="String"/>
-        <relationship name="episode" optional="YES" maxCount="1" deletionRule="Cascade" destinationEntity="Episode" inverseName="chapter" inverseEntity="Episode"/>
+        <relationship name="episode" optional="YES" maxCount="1" deletionRule="Cascade" destinationEntity="Episode" inverseName="chapters" inverseEntity="Episode"/>
     </entity>
     <entity name="ChapterVersion" representedClassName="ChapterVersion" syncable="YES" codeGenerationType="class">
         <attribute name="version" optional="YES" attributeType="String"/>
@@ -30,7 +30,7 @@
         <attribute name="title" optional="YES" attributeType="String"/>
         <attribute name="uuid" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
         <relationship name="bookmark" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Bookmark" inverseName="bookmarkEpisode" inverseEntity="Bookmark"/>
-        <relationship name="chapter" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="Chapter" inverseName="episode" inverseEntity="Chapter"/>
+        <relationship name="chapters" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="Chapter" inverseName="episode" inverseEntity="Chapter"/>
         <relationship name="chapterVer" optional="YES" maxCount="1" deletionRule="Cascade" destinationEntity="ChapterVersion" inverseName="episodeChapterVer" inverseEntity="ChapterVersion"/>
         <relationship name="podcast" optional="YES" maxCount="1" deletionRule="No Action" destinationEntity="Podcast" inverseName="episodes" inverseEntity="Podcast"/>
         <uniquenessConstraints>

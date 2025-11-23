@@ -17,6 +17,7 @@ final class PersistenceManager: ObservableObject {
     
     init(inMemory: Bool = false) {
         self.container = NSPersistentContainer(name: "UserData")
+        self.container.viewContext.mergePolicy = NSMergeByPropertyStoreTrumpMergePolicy
         
         if inMemory {
             let description = NSPersistentStoreDescription()
