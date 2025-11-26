@@ -16,15 +16,17 @@ struct RecentEpisodesList: View {
     
     @Binding var showFullPlayer: Bool
     @Binding var updateMessage: String
+    @Binding var lastUpdatetime: Date?
     
     let updateEpisodes: () async -> Void
     //@ObservedObject private var listModel: UnlistenedEpisodeList
     
-    init(updateEpisodes: @escaping () async -> Void, showFullPlayer: Binding<Bool>, updateMessage: Binding<String>) {
+    init(updateEpisodes: @escaping () async -> Void, showFullPlayer: Binding<Bool>, updateMessage: Binding<String>, lastUpdatetime: Binding<Date?>) {
         self.updateEpisodes = updateEpisodes
         //self._listModel = ObservedObject(wrappedValue: listModel)
         self._showFullPlayer = showFullPlayer
         self._updateMessage = updateMessage
+        self._lastUpdatetime = lastUpdatetime
     }
     
     var body: some View {
@@ -41,6 +43,7 @@ struct RecentEpisodesList: View {
         GeometryReader { geometry in
             VStack(alignment: .leading, spacing: 16) {
                 header
+                Text("\(lastUpdatetime ?? Date.distantPast)")
                 Text(updateMessage)
                 episodeList(in: geometry)
             }

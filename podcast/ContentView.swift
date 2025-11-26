@@ -13,6 +13,7 @@ struct ContentView: View {
     @State private var showFullPlayer = false
     @State private var showMiniPlayer = false
     @State private var updateMessage = ""
+    @State private var lastUpdateTime: Date?
     
     @StateObject var discoveryManager: DiscoveryManager
     @StateObject var downloadManager: DownloadManager
@@ -36,6 +37,7 @@ struct ContentView: View {
             for episode in newEpisodes {
                 downloadManager.startDownload(for: episode)
             }
+            try dataManager.writeLastLogTime()
         } catch {
             print("❌ Error updating episodes: \(error)")
         }
@@ -46,7 +48,8 @@ struct ContentView: View {
             TabView {
                 RecentEpisodesList(updateEpisodes: updateEpisodes,
                                    showFullPlayer: $showFullPlayer,
-                                   updateMessage: $updateMessage)
+                                   updateMessage: $updateMessage,
+                                   lastUpdatetime: $lastUpdateTime)
                     .environmentObject(themeManager)
                     .environmentObject(downloadManager)
                     .environmentObject(dataManager)
@@ -100,6 +103,7 @@ struct ContentView: View {
             .accentColor(Color(themeManager.selectedTheme.primaryColor))
             .onAppear {
                 Task {
+                    lastUpdateTime = dataManager.fetchLatestRefreshTime()
                     await updateEpisodes()
                 }
             }

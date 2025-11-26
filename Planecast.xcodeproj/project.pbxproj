@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		4F1B8FBA2ED6B14C00DBE62C /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F1B8FB92ED6B14C00DBE62C /* AppDelegate.swift */; };
 		4F52BD6D2D9ACFCA00A7273D /* PodcastApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F52BD6C2D9ACFCA00A7273D /* PodcastApp.swift */; };
 		4F5FD96A2E1E12AD0062A339 /* FirebaseCrashlytics in Frameworks */ = {isa = PBXBuildFile; productRef = 4F5FD9692E1E12AD0062A339 /* FirebaseCrashlytics */; };
 		4F5FD96D2E1E18E10062A339 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 4F5FD96C2E1E18E10062A339 /* GoogleService-Info.plist */; };
@@ -15,7 +16,6 @@
 		4F5FD9702E1E18E10062A339 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 4F5FD96C2E1E18E10062A339 /* GoogleService-Info.plist */; };
 		4F6431B22DE4BAFF00E0BE72 /* FeedKit in Frameworks */ = {isa = PBXBuildFile; productRef = 4F6431B12DE4BAFF00E0BE72 /* FeedKit */; };
 		4F6431B42DE4BAFF00E0BE72 /* XMLKit in Frameworks */ = {isa = PBXBuildFile; productRef = 4F6431B32DE4BAFF00E0BE72 /* XMLKit */; };
-		4FF1E49A2DFC5B5600F58106 /* backgroundRefresh.appex in Embed ExtensionKit Extensions */ = {isa = PBXBuildFile; fileRef = 4FF1E4922DFC5B5500F58106 /* backgroundRefresh.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -33,13 +33,6 @@
 			remoteGlobalIDString = 4FCE9F9B2D57A94B000A5F15;
 			remoteInfo = podcast;
 		};
-		4FF1E4982DFC5B5600F58106 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 4FCE9F942D57A94B000A5F15 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 4FF1E4912DFC5B5500F58106;
-			remoteInfo = backgroundRefresh;
-		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -49,7 +42,6 @@
 			dstPath = "$(EXTENSIONS_FOLDER_PATH)";
 			dstSubfolderSpec = 16;
 			files = (
-				4FF1E49A2DFC5B5600F58106 /* backgroundRefresh.appex in Embed ExtensionKit Extensions */,
 			);
 			name = "Embed ExtensionKit Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -57,6 +49,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		4F1B8FB92ED6B14C00DBE62C /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		4F52BD6C2D9ACFCA00A7273D /* PodcastApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodcastApp.swift; sourceTree = "<group>"; };
 		4F5FD96C2E1E18E10062A339 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		4FBFBB592DD83BCE00A82FF4 /* A refined, minimalist vector logo for a French-inspired podcast app that fills the entire image. The design features a graceful, full-canvas abstract arch. This elegant arch, reminiscent of a classic French doorway, is integrated with subtl.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "A refined, minimalist vector logo for a French-inspired podcast app that fills the entire image. The design features a graceful, full-canvas abstract arch. This elegant arch, reminiscent of a classic French doorway, is integrated with subtl.png"; path = "../../../Downloads/A refined, minimalist vector logo for a French-inspired podcast app that fills the entire image. The design features a graceful, full-canvas abstract arch. This elegant arch, reminiscent of a classic French doorway, is integrated with subtl.png"; sourceTree = "<group>"; };
@@ -67,7 +60,7 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		4FBFBB5B2DD988B000A82FF4 /* Exceptions for "podcast" folder in "podcast" target */ = {
+		4F1B8FB82ED6AD3C00DBE62C /* Exceptions for "podcast" folder in "podcast" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
@@ -87,7 +80,7 @@
 		4FCE9F9E2D57A94B000A5F15 /* podcast */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				4FBFBB5B2DD988B000A82FF4 /* Exceptions for "podcast" folder in "podcast" target */,
+				4F1B8FB82ED6AD3C00DBE62C /* Exceptions for "podcast" folder in "podcast" target */,
 			);
 			path = podcast;
 			sourceTree = "<group>";
@@ -158,6 +151,7 @@
 		4FCE9F932D57A94B000A5F15 = {
 			isa = PBXGroup;
 			children = (
+				4F1B8FB92ED6B14C00DBE62C /* AppDelegate.swift */,
 				4F52BD6C2D9ACFCA00A7273D /* PodcastApp.swift */,
 				4F5FD96C2E1E18E10062A339 /* GoogleService-Info.plist */,
 				4FCE9F9E2D57A94B000A5F15 /* podcast */,
@@ -196,7 +190,6 @@
 			buildRules = (
 			);
 			dependencies = (
-				4FF1E4992DFC5B5600F58106 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				4FCE9F9E2D57A94B000A5F15 /* podcast */,
@@ -397,6 +390,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				4F1B8FBA2ED6B14C00DBE62C /* AppDelegate.swift in Sources */,
 				4F52BD6D2D9ACFCA00A7273D /* PodcastApp.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -434,11 +428,6 @@
 			isa = PBXTargetDependency;
 			target = 4FCE9F9B2D57A94B000A5F15 /* podcast */;
 			targetProxy = 4FCE9FB72D57A955000A5F15 /* PBXContainerItemProxy */;
-		};
-		4FF1E4992DFC5B5600F58106 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 4FF1E4912DFC5B5500F58106 /* backgroundRefresh */;
-			targetProxy = 4FF1E4982DFC5B5600F58106 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -594,7 +583,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = mattwTest.podcast;
+				PRODUCT_BUNDLE_IDENTIFIER = com.mattw.planecast;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
@@ -635,7 +624,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = mattwTest.podcast;
+				PRODUCT_BUNDLE_IDENTIFIER = com.mattw.planecast;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;

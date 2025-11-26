@@ -14,7 +14,7 @@ class DownloadManager: NSObject, ObservableObject, URLSessionDownloadDelegate {
     private let dataManager: DataManager
     
     // Must be a unique identifier for your app's downloads
-    static let backgroundIdentifier = "com.planecast.Planecast"
+    static let backgroundIdentifier = "com.mattw.planecast.Planecast"
     
     // The central hub for all state changes. It broadcasts a tuple: (Episode, new DownloadState)
     private let downloadStateSubject = PassthroughSubject<(NSManagedObjectID, DownloadState), Never>()

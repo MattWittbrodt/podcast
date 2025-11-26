@@ -145,6 +145,26 @@ extension DataManager {
         podcastRequest.sortDescriptors = [NSSortDescriptor(keyPath: \Podcast.title_, ascending: true)]
         return try persistence.viewContext.fetch(podcastRequest)
     }
+    
+    func fetchLatestRefreshTime() -> Date? {
+        let fetchRequest: NSFetchRequest<UpdateTime> = UpdateTime.fetchRequest() 
+        
+        let sortDescriptor = NSSortDescriptor(key: "updateTime", ascending: false)
+        fetchRequest.sortDescriptors = [sortDescriptor]
+        
+        fetchRequest.fetchLimit = 1
+        
+        do {
+            let results = try self.persistence.viewContext.fetch(fetchRequest)
+            
+            // 4. Return the datetime of the single result, or nil
+            return results.first?.updateTime
+            
+        } catch {
+            print("Error fetching latest refresh time: \(error)")
+            return nil
+        }
+    }
 }
 
 // MARK: Data saving/updating functions
@@ -184,6 +204,19 @@ extension DataManager {
                 print("❌ Could not save main context")
             }
         }
+    }
+    
+    func writeLastLogTime() throws {
+        guard let entity = NSEntityDescription.entity(forEntityName: "UpdateTime", in: self.persistence.viewContext) else {
+            throw NSError(domain: "CoreDataError", code: 1, userInfo: [NSLocalizedDescriptionKey: "Could not find UpdateTime entity."])
+        }
+        
+        let newEntry = UpdateTime(entity: entity, insertInto: self.persistence.viewContext)
+        
+        // 2. Set the datetime field to the current date and time
+        newEntry.updateTime = Date()
+        
+        try self.persistence.viewContext.save()
     }
 }
 

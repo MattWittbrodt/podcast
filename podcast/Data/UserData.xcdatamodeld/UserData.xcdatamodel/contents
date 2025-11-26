@@ -42,7 +42,7 @@
     <entity name="Podcast" representedClassName="Podcast" syncable="YES" codeGenerationType="class">
         <attribute name="author_" optional="YES" attributeType="String" defaultValueString="Default Author"/>
         <attribute name="feedUrl" attributeType="String"/>
-        <attribute name="imageData" optional="YES" attributeType="Binary"/>
+        <attribute name="imageData" optional="YES" attributeType="Binary" allowsExternalBinaryDataStorage="YES"/>
         <attribute name="imageUrl" optional="YES" attributeType="String"/>
         <attribute name="playbackRate" optional="YES" attributeType="Float" defaultValueString="1" usesScalarValueType="YES"/>
         <attribute name="podcastDescription_" optional="YES" attributeType="String" defaultValueString="Default Description"/>
@@ -53,5 +53,8 @@
     </entity>
     <entity name="Settings" representedClassName="Settings" syncable="YES" codeGenerationType="class">
         <attribute name="downloadCount" optional="YES" attributeType="Integer 16" defaultValueString="3" usesScalarValueType="YES"/>
+    </entity>
+    <entity name="UpdateTime" representedClassName="UpdateTime" syncable="YES" codeGenerationType="class">
+        <attribute name="updateTime" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
     </entity>
 </model>

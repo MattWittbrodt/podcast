@@ -26,7 +26,6 @@ class PodcastFeedService: ObservableObject {
     }
     
     func updateAllSubscribedPodcasts() async -> [Episode] {
-        print("FeedService: starting full sync on launch")
         do {
             let feeds = try await dataManager.loadSuscribedPodcasts()
             // Returning episodes first, then downloading all later
@@ -74,6 +73,36 @@ extension PodcastFeedService {
             print("❌ Failed to fetch episodes for \(podcast.title): \(error)")
             return []
         }
+    }
+    
+    func fetchDataFromImage(from urlString: String) async throws -> Data {
+        // 1. Validate and create the URL
+        guard let url = URL(string: urlString) else {
+            throw NSError(domain: "URLDownloadError", code: 400, userInfo: [NSLocalizedDescriptionKey: "Invalid URL string"])
+        }
+        
+        // 2. Use URLSession to fetch the data
+        // The data(from:delegate:) method returns the raw Data and the URLResponse
+        let (data, response) = try await URLSession.shared.data(from: url)
+        
+        // 3. Optional: Validate the HTTP response status code
+        guard let httpResponse = response as? HTTPURLResponse,
+              (200...299).contains(httpResponse.statusCode) else {
+            throw NSError(domain: "URLDownloadError", code: 500, userInfo: [NSLocalizedDescriptionKey: "Bad HTTP Response or Status Code"])
+        }
+        
+        // 4. Return the downloaded Data
+        return data
+    }
+    
+    private func compareImages(existingImage: Data?, newImageUrl: String) async -> Data? {
+        do {
+            let newData = try await fetchDataFromImage(from: newImageUrl)
+        } catch {
+            print("Bad podcast image: \(newImageUrl)")
+            return nil
+        }
+        return nil
     }
     
     // Function to fetch new chapters
