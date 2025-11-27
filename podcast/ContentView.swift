@@ -48,8 +48,6 @@ struct ContentView: View {
                                    showFullPlayer: $showFullPlayer,
                                    updateMessage: $updateMessage)
                     .environmentObject(themeManager)
-                    .environmentObject(downloadManager)
-                    .environmentObject(dataManager)
                     .tabItem {
                         Image(systemName: "house")
                         Text("Home")
@@ -58,8 +56,7 @@ struct ContentView: View {
                     .toolbarBackground(.visible, for: .tabBar) //<- here
                     .toolbarBackground(Color(themeManager.selectedTheme.secondoryColor), for: .tabBar)
                 
-                PodcastList()
-                    .environmentObject(themeManager)
+                PodcastList(showFullPlayer: $showFullPlayer)
                     .tabItem {
                         Image(systemName: "books.vertical")
                         Text("Podcasts")
@@ -97,6 +94,8 @@ struct ContentView: View {
             }
             .environmentObject(dataManager)
             .environmentObject(playbackManager)
+            .environmentObject(downloadManager)
+            .environmentObject(themeManager)
             .accentColor(Color(themeManager.selectedTheme.primaryColor))
             .onAppear {
                 Task {

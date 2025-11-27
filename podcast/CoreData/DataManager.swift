@@ -42,6 +42,7 @@ class DataManager: NSObject, ObservableObject {
             
             unlistenedEpisodes = try loadunlistenedEpisodes()
             print("Loading initiate data: \(unlistenedEpisodes.count) episodes")
+            
         } catch {
             print("Error fetching podcasts")
         }
@@ -145,6 +146,13 @@ extension DataManager {
         podcastRequest.sortDescriptors = [NSSortDescriptor(keyPath: \Podcast.title_, ascending: true)]
         return try persistence.viewContext.fetch(podcastRequest)
     }
+    
+    func getEpisodesForPodcast(for podcast: Podcast) throws -> [Episode] {
+        let fetchRequest: NSFetchRequest<Episode> = Episode.fetchRequest()
+        fetchRequest.sortDescriptors = [NSSortDescriptor(keyPath: \Episode.publishedDate, ascending: false)]
+        fetchRequest.predicate = NSPredicate(format: "podcast == %@", podcast.objectID)
+        return try persistence.viewContext.fetch(fetchRequest)
+    }
 }
 
 // MARK: Data saving/updating functions
@@ -162,6 +170,16 @@ extension DataManager {
             listEpisode.guid == episode.guid
         }
         try? persistence.viewContext.save()
+    }
+    
+    func markEpisodeAsUnlistened(_ episode: Episode) {
+        episode.listened = false
+        try? persistence.viewContext.save()
+        do {
+            unlistenedEpisodes = try loadunlistenedEpisodes()
+        } catch {
+            print("Failed to mark as unlistened.")
+        }
     }
     
     func saveEpisodeTime(_ episode: Episode, time: Double) {

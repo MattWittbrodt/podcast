@@ -58,7 +58,6 @@ struct EpisodeListCard: View {
         .onReceive(
             downloadManager.downloadStatePublisher(for: episode.objectID,
                                                    initialDownloadState: downloadManager.downloadFileExists(for: episode))) { state in
-            //print("✴️ Download state changed for \(String(describing: episode.title)): \(state)")
             // Update the local @State, triggering a view refresh
             downloadState = state
         }

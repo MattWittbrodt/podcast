@@ -54,4 +54,7 @@
     <entity name="Settings" representedClassName="Settings" syncable="YES" codeGenerationType="class">
         <attribute name="downloadCount" optional="YES" attributeType="Integer 16" defaultValueString="3" usesScalarValueType="YES"/>
     </entity>
+    <entity name="UpdateTime" representedClassName="UpdateTime" syncable="YES" codeGenerationType="class">
+        <attribute name="updateTime" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+    </entity>
 </model>
