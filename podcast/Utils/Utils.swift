@@ -12,13 +12,24 @@ import AVKit
 struct DateUtils {
     static func durationStringToSeconds(_ string: String) -> Int? {
         let components = string.components(separatedBy: ":")
-        guard components.count == 3,
-              let hours = Int(components[0]),
-              let minutes = Int(components[1]),
-              let seconds = Int(components[2]) else {
+        
+        switch components.count {
+        case 2:
+            guard let minutes = Int(components[0]),
+                  let seconds = Int(components[1]) else {
+                return nil
+            }
+            return minutes * 60 + seconds
+        case 3:
+            guard let hours = Int(components[0]),
+                  let minutes = Int(components[1]),
+                  let seconds = Int(components[2]) else {
+                return nil
+            }
+            return hours * 3600 + minutes * 60 + seconds
+        default:
             return nil
         }
-        return hours * 3600 + minutes * 60 + seconds
     }
 }
 

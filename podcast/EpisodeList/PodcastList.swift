@@ -62,9 +62,10 @@ struct PodcastList: View {
         HStack {  // Using HStack instead of Group provides better type inference
             Button(action: {
                 Task { @MainActor in
-                    //episode.listened = true
-                    //await viewModel.loadRecentEpisodes()
                     Podcast.delete(podcast: podcast)
+                    self.dataManager.saveMainContext()
+                    self.dataManager.refreshEpisodes()
+                    self.dataManager.refreshPodcasts()
                 }
             }) {
                 Label("Unsuscribe", systemImage: "tray.fill")

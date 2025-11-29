@@ -198,12 +198,13 @@ private struct RSSEpisodeBuilder {
             link: link.trimmingCharacters(in: .whitespacesAndNewlines),
             displayDescription: description.trimmingCharacters(in: .whitespacesAndNewlines),
             guid: guid.trimmingCharacters(in: .whitespacesAndNewlines),
-            imageUrl: imageUrl.trimmingCharacters(in: .whitespacesAndNewlines),
+            imageUrl: imageUrl,
             episodeDate: dateFormatter.date(from: publishedDate) ?? Date.distantPast,
             episodeDuration: Int16(duration) ?? 0,
             chapters: chapters,
             enclosureUrl: enclosureUrl,
-            chaptersUrl: chaptersUrl
+            imageData: imageData,
+            chaptersUrl: chaptersUrl,
         )
     }
 }

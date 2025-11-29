@@ -116,6 +116,15 @@ class DataManager: NSObject, ObservableObject {
             print("Error fetching")
         }
     }
+    
+    @MainActor
+    func refreshPodcasts() -> Void {
+        do {
+            podcasts = try loadSuscribedPodcasts()
+        } catch {
+            print("Error fetching podcasts")
+        }
+    }
 }
 
 // MARK: Data access functions

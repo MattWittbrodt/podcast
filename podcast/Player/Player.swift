@@ -106,61 +106,61 @@ struct PlayerControlsView: View {
 }
 
 
-struct PlayerImgNotes<ViewModel: PlayerViewModelProtocol>: View {
-    @EnvironmentObject var playerManager: ViewModel
-    @EnvironmentObject var themeManager: ThemeManager
-    @State private var currentPage: Int = 0
-    
-    private let spacing: CGFloat = 7
-    private let pageIndicatorTintColor = Color.gray.opacity(0.5)
-        
-    var body: some View {
-        VStack(spacing: spacing) {
-            GeometryReader { geometry in
-                TabView(selection: $currentPage) {
-                    PlayerImageHandler<ViewModel>()
-                        .environmentObject(playerManager)
-                        .tag(0)
-                        .frame(width: geometry.size.width)
-                    
-                    PlayerEpisodeDescriptionView(html: playerManager.currentEpisode?.displayDescription ?? "",
-                                                 theme: themeManager)
-                    .tag(1)
-                    .frame(width: geometry.size.width)
-                }
-                .tabViewStyle(.page(indexDisplayMode: .never))
-                .frame(height: 300)
-                .padding(.bottom, 15)
-            }
-            
-            // Page indicators
-            HStack(spacing: spacing) {
-                ForEach(0..<2, id: \.self) { index in
-                    Circle()
-                        .fill(index == currentPage ? themeManager.selectedTheme.primaryColor.opacity(0.8) : pageIndicatorTintColor)
-                        .frame(width: 8, height: 8)
-                        .onTapGesture {
-                            withAnimation {
-                                currentPage = index
-                            }
-                        }
-                }
-            }
-        }
-    }
-}
+//struct PlayerImgNotes<ViewModel: PlayerViewModelProtocol>: View {
+//    @EnvironmentObject var playerManager: ViewModel
+//    @EnvironmentObject var themeManager: ThemeManager
+//    @State private var currentPage: Int = 0
+//    
+//    private let spacing: CGFloat = 7
+//    private let pageIndicatorTintColor = Color.gray.opacity(0.5)
+//        
+//    var body: some View {
+//        VStack(spacing: spacing) {
+//            GeometryReader { geometry in
+//                TabView(selection: $currentPage) {
+//                    PlayerImageHandler<ViewModel>()
+//                        .environmentObject(playerManager)
+//                        .tag(0)
+//                        .frame(width: geometry.size.width)
+//                    
+//                    PlayerEpisodeDescriptionView(html: playerManager.currentEpisode?.displayDescription ?? "",
+//                                                 theme: themeManager)
+//                    .tag(1)
+//                    .frame(width: geometry.size.width)
+//                }
+//                .tabViewStyle(.page(indexDisplayMode: .never))
+//                .frame(height: 300)
+//                .padding(.bottom, 15)
+//            }
+//            
+//            // Page indicators
+//            HStack(spacing: spacing) {
+//                ForEach(0..<2, id: \.self) { index in
+//                    Circle()
+//                        .fill(index == currentPage ? themeManager.selectedTheme.primaryColor.opacity(0.8) : pageIndicatorTintColor)
+//                        .frame(width: 8, height: 8)
+//                        .onTapGesture {
+//                            withAnimation {
+//                                currentPage = index
+//                            }
+//                        }
+//                }
+//            }
+//        }
+//    }
+//}
 
-struct PlayerImageHandler<ViewModel: PlayerViewModelProtocol>: View {
-    @EnvironmentObject var playerManager: ViewModel
+struct EpisodeImageView: View {
+    @EnvironmentObject var playbackManager: PlaybackManager
         
     var body: some View {
-        if let imgData = playerManager.episodeImageData, let uIImg = UIImage(data: imgData) {
+        if let imgData = playbackManager.currentEpisodeImageData, let uIImg = UIImage(data: imgData) {
             Image(uiImage: uIImg)
                 .resizable()
                 .frame(width: 300, height: 300)
                 .cornerRadius(25)
         } else {
-            ProgressView()
+            EmptyView()
         }
     }
 }
@@ -220,6 +220,7 @@ struct Player: View {
                     
 //                    PlayerImgNotes<ViewModel>()
 //                        .environmentObject(playerManager)
+                    EpisodeImageView()
                     
                     // Chapter display and list
                     PlayerChapters()
@@ -241,7 +242,6 @@ struct Player: View {
                     .padding(.leading, 120)
                     .padding(.trailing, 120)
                                         
-                    //Text(playerManager.message)
                     AirPlayButton(activeTint: UIColor(Color(themeManager.selectedTheme.primaryColor)))
                         .frame(width: 120, height: 50)
                         .padding(.top, 30)

@@ -12,7 +12,7 @@ struct EpisodeListCardImage: View {
     
     var body: some View {
         if let imgData = imageData {
-            Image(uiImage: UIImage(data: imgData)!)
+            Image(uiImage: UIImage(data: imgData) ?? UIImage())
                 .resizable()
                 .frame(width: 100, height: 100, alignment: .topLeading)
                 .cornerRadius(20)
@@ -27,13 +27,13 @@ struct EpisodeListCardImage: View {
 
 struct EpisodeListCard: View {
     @EnvironmentObject var downloadManager: DownloadManager
-    @ObservedObject var episode: Episode
+    var episode: Episode
     // Local state to hold the state received from the publisher
     @State private var downloadState: DownloadState = .notDownloaded
     
     var body: some View {
         HStack{
-            //EpisodeListCardImage(imageData: episode.episode.imageData ?? episode.episode.podcastImgData)
+            EpisodeListCardImage(imageData: episode.getImageData())//(episode.imageData?.isEmpty == false ? episode.imageData : nil) ?? episode.podcast?.imageData)
             Spacer()
             VStack(alignment: .leading) {
                 Text("\(episode.episodeTitle)")
@@ -62,7 +62,6 @@ struct EpisodeListCard: View {
             downloadState = state
         }
     }
-    
 }
 
 //#Preview {

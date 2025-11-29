@@ -29,6 +29,7 @@ class PodcastFeedService: ObservableObject {
         print("FeedService: starting full sync on launch")
         do {
             let feeds = try await dataManager.loadSuscribedPodcasts()
+            
             // Returning episodes first, then downloading all later
             let newEpisodes = await withTaskGroup(of: [Episode].self, returning: [Episode].self) { group in
                 for podcast in feeds {
@@ -52,12 +53,74 @@ class PodcastFeedService: ObservableObject {
 
 // Function to fetch new items
 extension PodcastFeedService {
+    
+    // Checks fields in podcast and updates appropriately.
+    func updateProperty<Value: Equatable>(
+        // NO inout here
+        _ currentPodcast: Podcast,
+        _ keyPath: WritableKeyPath<Podcast, Value>,
+        newValue: Value
+    ) -> (podcast: Podcast, changed: Bool) {
+        
+        var mutablePodcast = currentPodcast
+        
+        if mutablePodcast[keyPath: keyPath] != newValue {
+            mutablePodcast[keyPath: keyPath] = newValue
+            return (podcast: mutablePodcast, changed: true)
+        }
+        return (podcast: currentPodcast, changed: false)
+    }
+    
+    func updatePodcast(_ podcast: Podcast, channel: RSSChannel) async {
+        var updatePodcast: Podcast = podcast
+        var hasChanged: Bool = false
+        
+        func applyUpdate<Value: Equatable>(_ keyPath: WritableKeyPath<Podcast, Value>, newValue: Value) {
+            let result = updateProperty(updatePodcast, keyPath, newValue: newValue)
+            updatePodcast = result.podcast
+            hasChanged = result.changed || hasChanged
+        }
+        
+        applyUpdate(\.title, newValue: channel.title)
+        applyUpdate(\.author, newValue: channel.author)
+        applyUpdate(\.podcastDescription, newValue: channel.description)
+        applyUpdate(\.imageUrl, newValue: channel.imageUrl)
+        
+        // Update image data (non-key path logic remains)
+        if let newData = await updatePodcastImg(podcast) {
+            podcast.imageData = newData
+            hasChanged = true
+        }
+                
+        // Save context if any change occurred
+        if hasChanged {
+            Task { @MainActor in
+                dataManager.saveMainContext()
+            }
+        }
+    }
+    
+    func updatePodcastImg(_ podcast: Podcast) async -> Data? {
+        guard let imgUrl = podcast.imageUrl,
+            let imgData = try? await loadImageFromWeb(url: imgUrl) else {
+            return nil
+        }
+        
+        if imgData != podcast.imageData {
+            return imgData
+        }
+        return nil
+    }
+    
     private func fetchNewEpisodes(for podcast: Podcast) async -> [Episode] {
         guard let url = URL(string: podcast.feedUrl?.upgradeToHTTPS ?? "") else {return []}
                 
         do {
             let parser = RSSFeedParser()
             let channel = try await parser.parse(from: url)
+            
+            await updatePodcast(podcast, channel: channel)
+            
             let existingGuids = Set(podcast.episodesArray.map { $0.guid })
             let newEpisodes = channel.items.filter { !existingGuids.contains($0.guid) }
             

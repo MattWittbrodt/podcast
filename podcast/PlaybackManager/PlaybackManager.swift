@@ -27,6 +27,7 @@ class PlaybackManager: ObservableObject {
     @Published var isPlaying: Bool = false
     @Published var episodeChapters: [Chapter]? = nil
     @Published var currentChapter: Chapter?
+    @Published var currentEpisodeImageData: Data? = nil
     
     // MARK: - Private Properties
     private var player: AVPlayer?
@@ -83,13 +84,19 @@ class PlaybackManager: ObservableObject {
         isPlaying = true
         startProgressUpdates()
         setupRemoteTransportControls()
-        setupNowPlayingInfo()
+        
+        // If there is some image data accessible, use
+        if let imgData = episode.getImageData() {
+            currentEpisodeImageData = imgData
+        }
         
         if episode.chapters != nil {
             let chapters = (episode.chapters as? Set<Chapter>)?
                 .sorted { $0.startTime < $1.startTime }
             self.episodeChapters = chapters
         }
+        
+        setupNowPlayingInfo()
     }
     
     // Handles the destruction of player object
@@ -278,12 +285,12 @@ extension PlaybackManager {
         var nowPlayingInfo = [String: Any]()
         nowPlayingInfo[MPMediaItemPropertyTitle] = currentEpisode?.title ?? "Episode Title"
         nowPlayingInfo[MPMediaItemPropertyArtist] = currentEpisode?.podcast?.title ?? "Podcast Name"
-        nowPlayingInfo[MPMediaItemPropertyAlbumTitle] = "Album"
         
         // Set artwork if available
-        if let image = UIImage(named: "AlbumArt") {
+        if let data = self.currentEpisodeImageData, let image = UIImage(data: data) {
             nowPlayingInfo[MPMediaItemPropertyArtwork] = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
         }
+        
         nowPlayingInfo[MPNowPlayingInfoPropertyElapsedPlaybackTime] = currentTime
         nowPlayingInfo[MPMediaItemPropertyPlaybackDuration] = duration
         nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackRate] = playbackRate
@@ -301,9 +308,9 @@ extension PlaybackManager {
         nowPlayingInfo[MPMediaItemPropertyPlaybackDuration] = episode.duration
         nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackRate] = player?.rate
             
-//        if let data = self.episodeImageData, let image = UIImage(data: data) {
-//            nowPlayingInfo[MPMediaItemPropertyArtwork] = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
-//        }
+        if let data = self.currentEpisodeImageData, let image = UIImage(data: data) {
+            nowPlayingInfo[MPMediaItemPropertyArtwork] = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
+        }
         
         MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
     }
