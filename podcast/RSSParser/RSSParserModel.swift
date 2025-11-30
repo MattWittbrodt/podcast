@@ -104,11 +104,14 @@ private struct RSSChannelBuilder {
     private var author = ""
     private var items: [RSSEpisode] = []
     private var currentElement: String?
+    private var itunesImage = ""
     
     mutating func addValue(_ value: String, for element: String) {
         if element == "title" && title != "" {
             return
         }
+        
+        print("\(title) - \(element) - \(value)")
 
         switch element {
         case "title": title += value
@@ -116,10 +119,7 @@ private struct RSSChannelBuilder {
         case "link": link += value
         case "description": description += value
         case "url": imageUrl += value
-        case "itunes:image":
-            if imageUrl.isEmpty {
-                imageUrl += value
-            }
+        case "itunes:image": itunesImage += value
         default: break
         }
     }
@@ -138,17 +138,15 @@ private struct RSSChannelBuilder {
         items.append(item)
     }
     
-    mutating func setImage(url: String?) {
-        imageUrl = url ?? ""
-    }
-    
     func build() -> RSSChannel {
-        RSSChannel(
+        let imageLocation = imageUrl.isEmpty ? itunesImage : imageUrl
+        
+        return RSSChannel(
             title: title.trimmingCharacters(in: .whitespacesAndNewlines),
             link: link.trimmingCharacters(in: .whitespacesAndNewlines),
             author: author.trimmingCharacters(in: .whitespacesAndNewlines),
             description: description.trimmingCharacters(in: .whitespacesAndNewlines),
-            imageUrl: imageUrl.trimmingCharacters(in: .whitespacesAndNewlines),
+            imageUrl: imageLocation.trimmingCharacters(in: .whitespacesAndNewlines),
             items: items
         )
     }
