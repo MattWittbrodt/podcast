@@ -44,7 +44,6 @@ class DownloadManager: NSObject, ObservableObject, URLSessionDownloadDelegate {
         // Attempt to create the directory
         do {
             try FileManager.default.createDirectory(at: downloadsURL, withIntermediateDirectories: true)
-            print("Downloads directory successfully created or already exists.")
             return downloadsURL
         } catch {
             print("Error creating downloads directory: \(error.localizedDescription)")

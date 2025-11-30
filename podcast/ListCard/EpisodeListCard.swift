@@ -27,13 +27,12 @@ struct EpisodeListCardImage: View {
 
 struct EpisodeListCard: View {
     @EnvironmentObject var downloadManager: DownloadManager
-    var episode: Episode
-    // Local state to hold the state received from the publisher
+    @ObservedObject var episode: Episode
     @State private var downloadState: DownloadState = .notDownloaded
     
     var body: some View {
         HStack{
-            EpisodeListCardImage(imageData: episode.getImageData())//(episode.imageData?.isEmpty == false ? episode.imageData : nil) ?? episode.podcast?.imageData)
+            EpisodeListCardImage(imageData: episode.getImageData())
             Spacer()
             VStack(alignment: .leading) {
                 Text("\(episode.episodeTitle)")
@@ -48,7 +47,7 @@ struct EpisodeListCard: View {
                     Text("\(episode.formattedDate)")
                         .padding(.leading,3)
                     Spacer()
-                    Text("\(shortTime(seconds: episode.episodeDuration-Int16(episode.lastListenedTime)))")
+                    Text("\(shortTime(seconds: episode.episodeDuration-Int16(episode.lastListened)))")
                         .padding(.leading,3)
                     DownloadStatusView(state: downloadState)
                 }

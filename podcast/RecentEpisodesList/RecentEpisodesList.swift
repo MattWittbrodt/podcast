@@ -104,7 +104,10 @@ struct RecentEpisodesList: View {
     private func handleEpisodeSelection(_ episode: Episode) {
         Task { @MainActor in
             showFullPlayer = true
-            playbackManager.startPlayingEpisode(episode: episode)
+            playbackManager.loadEpisodeAndPlaylist(
+                episode: episode,
+                playlist: dataManager.unlistenedEpisodes
+            )
         }
     }
 }

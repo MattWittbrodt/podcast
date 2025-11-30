@@ -31,6 +31,7 @@ class PlaybackManager: ObservableObject {
     // MARK: - Private Properties
     private var player: AVPlayer?
     private var timeObserver: Any?
+    private var playlistEpisodes: [Episode] = []
     
     init(downloadManager: DownloadManager, dataManager: DataManager) {
         self.downloadManager = downloadManager
@@ -55,6 +56,28 @@ class PlaybackManager: ObservableObject {
         }
     }
     
+    // Function to handle end of episode procedures
+    func handleEpisodeEnd() {
+        // Mark episode as listened
+        guard let currentEpisode = self.currentEpisode else { return }
+        dataManager.markEpisodeAsListened(currentEpisode)
+        
+        if !playlistEpisodes.isEmpty {
+            let nextEpisode = playlistEpisodes.removeFirst()
+            startPlayingEpisode(episode: nextEpisode)
+        }
+    }
+    
+    // Function to handle the 'playlist' functionality
+    func loadEpisodeAndPlaylist(episode: Episode, playlist: [Episode]) {
+        if let currentEpisodeIndex = playlist.firstIndex(where: {$0.objectID == episode.objectID}) {
+            // stores shrunken array of episodes to be played
+            let indexWithoutEpisode = currentEpisodeIndex + 1
+            playlistEpisodes = Array(playlist[indexWithoutEpisode...])
+        }
+        startPlayingEpisode(episode: episode)
+    }
+    
     func startPlayingEpisode(episode: Episode) {
         self.cleanupPlayer()
         
@@ -62,19 +85,15 @@ class PlaybackManager: ObservableObject {
         
         if let localPath = downloadManager.getFullDownloadPath(for: episode),
            downloadManager.downloadFileExists(for: episode) {
-            print("⬇️ ✅ Found download")
             urlToPlay = localPath
         } else if let remoteURLString = episode.enclosureUrl,
                  let remoteURL = URL(string: remoteURLString) {
             urlToPlay = remoteURL
-            print("Playing episode by streaming from remote URL.")
         } else {
-            print("Error: Invalid episode URL and no local file found.")
             return
         }
         
         guard let finalUrl = urlToPlay else {
-            print("Error: Invalid episode URL and no local file found.")
             return
         }
         
@@ -221,6 +240,11 @@ extension PlaybackManager {
                 guard let saveFrequency = self?.saveFrequency, let currentEpisode = self?.currentEpisode else { return }
                 if time.seconds - currentEpisode.lastListened > saveFrequency {
                     self?.dataManager.saveEpisodeTime(currentEpisode, time: time.seconds)
+                }
+                
+                // Look for end of episode and handle appropriately
+                if currentEpisode.duration - Int16(time.seconds) < 1 {
+                    self?.handleEpisodeEnd()
                 }
             }
         }
