@@ -6,7 +6,7 @@
         <relationship name="bookmarkEpisode" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Episode" inverseName="bookmark" inverseEntity="Episode"/>
     </entity>
     <entity name="Chapter" representedClassName="Chapter" syncable="YES" codeGenerationType="class">
-        <attribute name="imageData" optional="YES" attributeType="Binary"/>
+        <attribute name="imageData" optional="YES" attributeType="Binary" allowsExternalBinaryDataStorage="YES"/>
         <attribute name="imageUrl" optional="YES" attributeType="String"/>
         <attribute name="startTime" optional="YES" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
         <attribute name="title" optional="YES" attributeType="String"/>

@@ -168,6 +168,7 @@ extension DataManager {
 extension DataManager {
     func saveEpisodeToPodcast(_ episode: RSSEpisode, for podcast: Podcast) -> Episode {
         let newEpisode = Episode.create(from: episode, context: persistence.viewContext)
+        
         newEpisode.podcast = podcast
         try? persistence.viewContext.save()
         return newEpisode
@@ -244,34 +245,55 @@ extension DataManager {
             // Create a new, private context for this single transaction
             let backgroundContext = await self.persistence.container.newBackgroundContext()
             
-            // Perform all work on the context's private queue
-            try await backgroundContext.perform {
+            let needsUpdate = try await backgroundContext.perform {
+                guard let episodeInContext = backgroundContext.object(with: episodeID) as? Episode else {
+                    throw DataManagerError.episodeNotFound
+                }
+                // If chapter count is the same, no need to proceed with updates
+                return episodeInContext.chapters?.count != chapterInfos.count
+            }
+            
+            guard needsUpdate else {
+                return // Chapters are already up-to-date, exit early
+            }
+            
+            print("New chapters found, beginning download and update.")
+
+            // If we reach here, then need to update chapters
+            let chaptersWithImages = await withTaskGroup(of: ChapterInfo.self, returning: [ChapterInfo].self) { group in
+                for chap in chapterInfos {
+                    group.addTask {
+                        var newChapWithData = chap
+                        if let imgUrl = chap.img, let imgData = try? await loadImageFromWeb(url: imgUrl) {
+                            newChapWithData.imgData = imgData
+                        }
+                        return newChapWithData
+                    }
+                }
                 
+                var newChapterInfos = [ChapterInfo]()
+                for await result in group {
+                    newChapterInfos.append(result)
+                }
+                return newChapterInfos
+            }
+            
+            try await backgroundContext.perform {
                 // 1. Fetch the necessary parent object SAFELY in THIS context
                 guard let episodeInContext = backgroundContext.object(with: episodeID) as? Episode else {
                     throw DataManagerError.episodeNotFound
                 }
                 
-                // If chapter count is the same, no need to go further
-                if episodeInContext.chapters?.count == chapterInfos.count {
-                    return
-                }
-                
                 episodeInContext.chapters = nil
                 print("removed chapters for: \(episodeInContext.title ?? "title missing")")
                 
-                // --- 3. Create, Map, and Link New Chapters ---
-                for chapterInfo in chapterInfos {
+                for chapterInfo in chaptersWithImages {
                     let chapter = Chapter.fromWeb(chapter: chapterInfo, context: backgroundContext)
-                    
-                    // 🔥 CRITICAL: Link the required parent immediately to satisfy validation (Code 1550)
                     chapter.episode = episodeInContext
                 }
                 
-                // --- 4. Final Save (The only I/O operation) ---
-                // This is the only point where the database is touched,
-                // and it happens off the main thread.
                 try backgroundContext.save()
+                print("Successfully saved new chapters for: \(episodeInContext.title ?? "title missing")")
             }
         }
     }

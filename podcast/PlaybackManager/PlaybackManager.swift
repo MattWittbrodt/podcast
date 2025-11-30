@@ -16,7 +16,6 @@ class PlaybackManager: ObservableObject {
     private let saveFrequency: TimeInterval = 5
     
     // MARK: - Published Properties
-    //@Published var showPlayerSheet: Bool = false
     @Published var currentEpisode: Episode?
     @Published var playbackState: PlaybackState = .stopped
     @Published var currentTime: Double = 0
@@ -45,6 +44,15 @@ class PlaybackManager: ObservableObject {
         $currentTime
             .map { formattedTime(time: $0) }
             .assign(to: &$currentTimeString)
+    }
+    
+    func getCurrentImageData() {
+        guard let currentEpisode = currentEpisode else { return }
+        if let chapter = currentChapter, let chapterImgData = chapter.imageData {
+            currentEpisodeImageData = chapterImgData
+        } else {
+            currentEpisodeImageData = currentEpisode.getImageData()
+        }
     }
     
     func startPlayingEpisode(episode: Episode) {
@@ -85,16 +93,14 @@ class PlaybackManager: ObservableObject {
         startProgressUpdates()
         setupRemoteTransportControls()
         
-        // If there is some image data accessible, use
-        if let imgData = episode.getImageData() {
-            currentEpisodeImageData = imgData
-        }
-        
         if episode.chapters != nil {
             let chapters = (episode.chapters as? Set<Chapter>)?
                 .sorted { $0.startTime < $1.startTime }
             self.episodeChapters = chapters
         }
+        
+        // Image data needs to be called after everything has been set up
+        getCurrentImageData()
         
         setupNowPlayingInfo()
     }
@@ -106,6 +112,7 @@ class PlaybackManager: ObservableObject {
         currentTime = 0.0
         stopProgressUpdates()
         player = nil
+        currentEpisodeImageData = nil
     }
 }
 
@@ -206,6 +213,8 @@ extension PlaybackManager {
                     let potentialNewChapter = self?.getCurrentChapter(time: Int16(time.seconds))
                     if potentialNewChapter != self?.currentChapter {
                         self?.currentChapter = potentialNewChapter
+                        // Important to call after new chapter has been set up
+                        self?.getCurrentImageData()
                     }
                 }
                 

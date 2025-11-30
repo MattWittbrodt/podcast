@@ -53,13 +53,20 @@ actor RSSFeedParser {
             } else if elementName == "enclosure" {
                 currentItemBuilder?.setEnclosure(url: attributeDict["url"])
             } else if elementName == "itunes:image" {
-                currentItemBuilder?.setImage(url: attributeDict["href"])
+                let imageUrl = attributeDict["href"]
+                
+                // Sometimes this field can occur in the channel section as well
+                if currentItemBuilder != nil {
+                    currentItemBuilder?.setImage(url: imageUrl)
+                } else if let imageUrl = imageUrl {
+                    channelBuilder.addValue(imageUrl, for: elementName)
+                }
             }
         }
         
         func parser(_ parser: XMLParser, foundCharacters string: String) {
             if currentElement == "item" { return }
-
+            
             let trimmed = string.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !trimmed.isEmpty else { return }
             if currentItemBuilder != nil {
@@ -102,12 +109,17 @@ private struct RSSChannelBuilder {
         if element == "title" && title != "" {
             return
         }
+
         switch element {
         case "title": title += value
         case "itunes:author": author += value
         case "link": link += value
         case "description": description += value
         case "url": imageUrl += value
+        case "itunes:image":
+            if imageUrl.isEmpty {
+                imageUrl += value
+            }
         default: break
         }
     }
@@ -124,6 +136,10 @@ private struct RSSChannelBuilder {
     
     mutating func addItem(_ item: RSSEpisode) {
         items.append(item)
+    }
+    
+    mutating func setImage(url: String?) {
+        imageUrl = url ?? ""
     }
     
     func build() -> RSSChannel {

@@ -16,6 +16,7 @@ struct ChapterInfo: Hashable, Codable {
     let startTime: Int16
     let title: String?
     let img: String?
+    var imgData: Data?
 }
 
 class PodcastFeedService: ObservableObject {
@@ -119,14 +120,35 @@ extension PodcastFeedService {
             let parser = RSSFeedParser()
             let channel = try await parser.parse(from: url)
             
+            // Updates podcast fields
             await updatePodcast(podcast, channel: channel)
             
             let existingGuids = Set(podcast.episodesArray.map { $0.guid })
             let newEpisodes = channel.items.filter { !existingGuids.contains($0.guid) }
             
+            // Task group to apply the imgdata to each RSS episode
+            let rssEpisodesImgData = await withTaskGroup(of: RSSEpisode.self, returning: [RSSEpisode].self) { group in
+                for episode in newEpisodes {
+                    group.addTask {
+                        var updateEpisode = episode
+                        guard let imgData = try? await loadImageFromWeb(url: episode.imageUrl) else {
+                            return episode
+                        }
+                        updateEpisode.imageData = imgData
+                        return updateEpisode
+                    }
+                }
+                
+                var processedEpisodes = [RSSEpisode]()
+                for await result in group {
+                    processedEpisodes.append(result)
+                }
+                return processedEpisodes
+            }
+            
             // Creating new objects
             let processedEpisodes = await Task { @MainActor in // Hop to the main actor context
-                let processedEpisodes = newEpisodes.map {
+                let processedEpisodes = rssEpisodesImgData.map {
                     dataManager.saveEpisodeToPodcast($0, for: podcast)
                 }
                 return processedEpisodes

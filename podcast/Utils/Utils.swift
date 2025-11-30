@@ -129,9 +129,11 @@ func loadImageFromWeb(url: String) async throws -> Data? {
             let (data, _) = try await URLSession.shared.data(from:fixedUrl)
             return data
         } else {
+            print("Failed to create URL from: \(fixedString)")
             throw ImageError.badUrl("Failed to create URL from: \(fixedString)")
         }
     } catch {
+        print("Fetch imgage error: \(error)")
         throw ImageError.fetchImage(error)
     }
 }
