@@ -132,16 +132,20 @@ extension PodcastFeedService {
                     group.addTask {
                         var updateEpisode = episode
                         guard let imgData = try? await loadImageFromWeb(url: episode.imageUrl) else {
+                            print("\(updateEpisode.episodeTitle) - No image data.")
                             return episode
                         }
                         updateEpisode.imageData = imgData
+                        print("Rss image data: \(updateEpisode.episodeTitle): \(updateEpisode.imageData)")
                         return updateEpisode
                     }
                 }
                 
                 var processedEpisodes = [RSSEpisode]()
                 for await result in group {
-                    processedEpisodes.append(result)
+                    let r = result
+                    print("in processed: \(r.episodeTitle) - \(r.imageData)")
+                    processedEpisodes.append(r)
                 }
                 return processedEpisodes
             }

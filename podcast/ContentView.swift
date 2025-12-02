@@ -21,23 +21,19 @@ struct ContentView: View {
     @StateObject var playbackManager: PlaybackManager
     
     func updateEpisodes() async {
-        do {
-            updateMessage = "getting new episodes..."
-            let newEpisodes = await feedService.updateAllSubscribedPodcasts()
-            
-            // Updating chapters
-            updateMessage = "updating episodes with chapters"
-            await dataManager.updateEpisodesWithChapters()
-            updateMessage = "updated episodes with chapters. now handling episodes"
-            
-            // Continue handling episodes
-            dataManager.handleNewEpisodes(episodes: newEpisodes)
-            updateMessage = "starting download"
-            for episode in newEpisodes {
-                downloadManager.startDownload(for: episode)
-            }
-        } catch {
-            print("❌ Error updating episodes: \(error)")
+        updateMessage = "getting new episodes..."
+        let newEpisodes = await feedService.updateAllSubscribedPodcasts()
+        
+        // Updating chapters
+        updateMessage = "updating episodes with chapters"
+        await dataManager.updateEpisodesWithChapters()
+        updateMessage = "updated episodes with chapters. now handling episodes"
+        
+        // Continue handling episodes
+        dataManager.handleNewEpisodes(episodes: newEpisodes)
+        updateMessage = "starting download"
+        for episode in newEpisodes {
+            downloadManager.startDownload(for: episode)
         }
     }
     

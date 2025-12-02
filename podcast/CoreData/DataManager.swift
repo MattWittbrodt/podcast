@@ -55,6 +55,10 @@ class DataManager: NSObject, ObservableObject {
         
         // Update list with new episodes and then sort
         self.unlistenedEpisodes.append(contentsOf: uniqueNewEpisodes)
+        sortEpisodesByTime()
+    }
+    
+    func sortEpisodesByTime() {
         self.unlistenedEpisodes.sort { (episode1: Episode, episode2: Episode) in
             let date1 = episode1.publishedDate ?? Date.distantPast
             let date2 = episode2.publishedDate ?? Date.distantPast
@@ -66,6 +70,7 @@ class DataManager: NSObject, ObservableObject {
     func subscribeToPodcast(feedUrl: String, channel: RSSChannel) {
         let context = persistence.viewContext
         let podcast = Podcast.create(from: channel, feedUrl: feedUrl, context: context)
+        
         channel.items.enumerated().forEach { index, episodeItem in
             let episode = Episode.create(from: episodeItem, context: context)
             episode.podcast = podcast
@@ -73,6 +78,7 @@ class DataManager: NSObject, ObservableObject {
             // Keep most recent episode "unlistened" and add to unlistened episodes
             if index == 0 {
                 unlistenedEpisodes.append(episode)
+                sortEpisodesByTime()
             } else {
                 episode.listened = true
             }

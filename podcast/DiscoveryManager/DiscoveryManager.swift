@@ -43,7 +43,12 @@ class DiscoveryManager: ObservableObject {
         }
         let parser = RSSFeedParser()
         do {
-            let channelFromRSS = try await parser.parse(from: url)
+            var channelFromRSS = try await parser.parse(from: url)
+            
+            // Add image data
+            let imgData = try? await loadImageFromWeb(url: channelFromRSS.imageUrl)
+            channelFromRSS.podcastImageData = imgData
+            
             await MainActor.run {
                 self.rssChannel = channelFromRSS
             }
@@ -61,7 +66,6 @@ class DiscoveryManager: ObservableObject {
         }
         Task { @MainActor in
             dataManager.subscribeToPodcast(feedUrl: url, channel: channel )
-            print("Subscribed")
         }
     }
 }

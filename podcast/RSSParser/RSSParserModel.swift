@@ -111,8 +111,6 @@ private struct RSSChannelBuilder {
             return
         }
         
-        print("\(title) - \(element) - \(value)")
-
         switch element {
         case "title": title += value
         case "itunes:author": author += value

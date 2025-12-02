@@ -166,6 +166,9 @@ extension Episode {
         entity.guid = episode.guid
         entity.imageUrl = episode.imageUrl
         entity.publishedDate = episode.episodeDate
+        if let imageData = episode.imageData {
+            entity.imageData = imageData
+        }
         return entity
     }
     
