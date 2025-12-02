@@ -35,6 +35,10 @@ extension Chapter {
         chapterObj.startTime = Int16(chapter.startTime)
         chapterObj.title = chapter.title
         
+        if let imgData = chapter.imgData {
+            chapterObj.imageData = imgData
+        }
+        
         return chapterObj
     }
     

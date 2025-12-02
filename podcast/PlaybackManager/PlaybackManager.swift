@@ -16,7 +16,6 @@ class PlaybackManager: ObservableObject {
     private let saveFrequency: TimeInterval = 5
     
     // MARK: - Published Properties
-    //@Published var showPlayerSheet: Bool = false
     @Published var currentEpisode: Episode?
     @Published var playbackState: PlaybackState = .stopped
     @Published var currentTime: Double = 0
@@ -27,10 +26,12 @@ class PlaybackManager: ObservableObject {
     @Published var isPlaying: Bool = false
     @Published var episodeChapters: [Chapter]? = nil
     @Published var currentChapter: Chapter?
+    @Published var currentEpisodeImageData: Data? = nil
     
     // MARK: - Private Properties
     private var player: AVPlayer?
     private var timeObserver: Any?
+    private var playlistEpisodes: [Episode] = []
     
     init(downloadManager: DownloadManager, dataManager: DataManager) {
         self.downloadManager = downloadManager
@@ -46,6 +47,37 @@ class PlaybackManager: ObservableObject {
             .assign(to: &$currentTimeString)
     }
     
+    func getCurrentImageData() {
+        guard let currentEpisode = currentEpisode else { return }
+        if let chapter = currentChapter, let chapterImgData = chapter.imageData {
+            currentEpisodeImageData = chapterImgData
+        } else {
+            currentEpisodeImageData = currentEpisode.getImageData()
+        }
+    }
+    
+    // Function to handle end of episode procedures
+    func handleEpisodeEnd() {
+        // Mark episode as listened
+        guard let currentEpisode = self.currentEpisode else { return }
+        dataManager.markEpisodeAsListened(currentEpisode)
+        
+        if !playlistEpisodes.isEmpty {
+            let nextEpisode = playlistEpisodes.removeFirst()
+            startPlayingEpisode(episode: nextEpisode)
+        }
+    }
+    
+    // Function to handle the 'playlist' functionality
+    func loadEpisodeAndPlaylist(episode: Episode, playlist: [Episode]) {
+        if let currentEpisodeIndex = playlist.firstIndex(where: {$0.objectID == episode.objectID}) {
+            // stores shrunken array of episodes to be played
+            let indexWithoutEpisode = currentEpisodeIndex + 1
+            playlistEpisodes = Array(playlist[indexWithoutEpisode...])
+        }
+        startPlayingEpisode(episode: episode)
+    }
+    
     func startPlayingEpisode(episode: Episode) {
         self.cleanupPlayer()
         
@@ -53,19 +85,15 @@ class PlaybackManager: ObservableObject {
         
         if let localPath = downloadManager.getFullDownloadPath(for: episode),
            downloadManager.downloadFileExists(for: episode) {
-            print("⬇️ ✅ Found download")
             urlToPlay = localPath
         } else if let remoteURLString = episode.enclosureUrl,
                  let remoteURL = URL(string: remoteURLString) {
             urlToPlay = remoteURL
-            print("Playing episode by streaming from remote URL.")
         } else {
-            print("Error: Invalid episode URL and no local file found.")
             return
         }
         
         guard let finalUrl = urlToPlay else {
-            print("Error: Invalid episode URL and no local file found.")
             return
         }
         
@@ -83,13 +111,17 @@ class PlaybackManager: ObservableObject {
         isPlaying = true
         startProgressUpdates()
         setupRemoteTransportControls()
-        setupNowPlayingInfo()
         
         if episode.chapters != nil {
             let chapters = (episode.chapters as? Set<Chapter>)?
                 .sorted { $0.startTime < $1.startTime }
             self.episodeChapters = chapters
         }
+        
+        // Image data needs to be called after everything has been set up
+        getCurrentImageData()
+        
+        setupNowPlayingInfo()
     }
     
     // Handles the destruction of player object
@@ -99,6 +131,7 @@ class PlaybackManager: ObservableObject {
         currentTime = 0.0
         stopProgressUpdates()
         player = nil
+        currentEpisodeImageData = nil
     }
 }
 
@@ -199,12 +232,19 @@ extension PlaybackManager {
                     let potentialNewChapter = self?.getCurrentChapter(time: Int16(time.seconds))
                     if potentialNewChapter != self?.currentChapter {
                         self?.currentChapter = potentialNewChapter
+                        // Important to call after new chapter has been set up
+                        self?.getCurrentImageData()
                     }
                 }
                 
                 guard let saveFrequency = self?.saveFrequency, let currentEpisode = self?.currentEpisode else { return }
                 if time.seconds - currentEpisode.lastListened > saveFrequency {
                     self?.dataManager.saveEpisodeTime(currentEpisode, time: time.seconds)
+                }
+                
+                // Look for end of episode and handle appropriately
+                if currentEpisode.duration - Int16(time.seconds) < 1 {
+                    self?.handleEpisodeEnd()
                 }
             }
         }
@@ -278,12 +318,12 @@ extension PlaybackManager {
         var nowPlayingInfo = [String: Any]()
         nowPlayingInfo[MPMediaItemPropertyTitle] = currentEpisode?.title ?? "Episode Title"
         nowPlayingInfo[MPMediaItemPropertyArtist] = currentEpisode?.podcast?.title ?? "Podcast Name"
-        nowPlayingInfo[MPMediaItemPropertyAlbumTitle] = "Album"
         
         // Set artwork if available
-        if let image = UIImage(named: "AlbumArt") {
+        if let data = self.currentEpisodeImageData, let image = UIImage(data: data) {
             nowPlayingInfo[MPMediaItemPropertyArtwork] = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
         }
+        
         nowPlayingInfo[MPNowPlayingInfoPropertyElapsedPlaybackTime] = currentTime
         nowPlayingInfo[MPMediaItemPropertyPlaybackDuration] = duration
         nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackRate] = playbackRate
@@ -301,9 +341,9 @@ extension PlaybackManager {
         nowPlayingInfo[MPMediaItemPropertyPlaybackDuration] = episode.duration
         nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackRate] = player?.rate
             
-//        if let data = self.episodeImageData, let image = UIImage(data: data) {
-//            nowPlayingInfo[MPMediaItemPropertyArtwork] = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
-//        }
+        if let data = self.currentEpisodeImageData, let image = UIImage(data: data) {
+            nowPlayingInfo[MPMediaItemPropertyArtwork] = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
+        }
         
         MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
     }

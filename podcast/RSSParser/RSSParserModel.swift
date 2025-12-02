@@ -53,13 +53,20 @@ actor RSSFeedParser {
             } else if elementName == "enclosure" {
                 currentItemBuilder?.setEnclosure(url: attributeDict["url"])
             } else if elementName == "itunes:image" {
-                currentItemBuilder?.setImage(url: attributeDict["href"])
+                let imageUrl = attributeDict["href"]
+                
+                // Sometimes this field can occur in the channel section as well
+                if currentItemBuilder != nil {
+                    currentItemBuilder?.setImage(url: imageUrl)
+                } else if let imageUrl = imageUrl {
+                    channelBuilder.addValue(imageUrl, for: elementName)
+                }
             }
         }
         
         func parser(_ parser: XMLParser, foundCharacters string: String) {
             if currentElement == "item" { return }
-
+            
             let trimmed = string.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !trimmed.isEmpty else { return }
             if currentItemBuilder != nil {
@@ -97,17 +104,20 @@ private struct RSSChannelBuilder {
     private var author = ""
     private var items: [RSSEpisode] = []
     private var currentElement: String?
+    private var itunesImage = ""
     
     mutating func addValue(_ value: String, for element: String) {
         if element == "title" && title != "" {
             return
         }
+        
         switch element {
         case "title": title += value
         case "itunes:author": author += value
         case "link": link += value
         case "description": description += value
         case "url": imageUrl += value
+        case "itunes:image": itunesImage += value
         default: break
         }
     }
@@ -127,12 +137,14 @@ private struct RSSChannelBuilder {
     }
     
     func build() -> RSSChannel {
-        RSSChannel(
+        let imageLocation = imageUrl.isEmpty ? itunesImage : imageUrl
+        
+        return RSSChannel(
             title: title.trimmingCharacters(in: .whitespacesAndNewlines),
             link: link.trimmingCharacters(in: .whitespacesAndNewlines),
             author: author.trimmingCharacters(in: .whitespacesAndNewlines),
             description: description.trimmingCharacters(in: .whitespacesAndNewlines),
-            imageUrl: imageUrl.trimmingCharacters(in: .whitespacesAndNewlines),
+            imageUrl: imageLocation.trimmingCharacters(in: .whitespacesAndNewlines),
             items: items
         )
     }
@@ -198,12 +210,13 @@ private struct RSSEpisodeBuilder {
             link: link.trimmingCharacters(in: .whitespacesAndNewlines),
             displayDescription: description.trimmingCharacters(in: .whitespacesAndNewlines),
             guid: guid.trimmingCharacters(in: .whitespacesAndNewlines),
-            imageUrl: imageUrl.trimmingCharacters(in: .whitespacesAndNewlines),
+            imageUrl: imageUrl,
             episodeDate: dateFormatter.date(from: publishedDate) ?? Date.distantPast,
             episodeDuration: Int16(duration) ?? 0,
             chapters: chapters,
             enclosureUrl: enclosureUrl,
-            chaptersUrl: chaptersUrl
+            imageData: imageData,
+            chaptersUrl: chaptersUrl,
         )
     }
 }

@@ -21,23 +21,19 @@ struct ContentView: View {
     @StateObject var playbackManager: PlaybackManager
     
     func updateEpisodes() async {
-        do {
-            updateMessage = "getting new episodes..."
-            let newEpisodes = await feedService.updateAllSubscribedPodcasts()
-            
-            // Updating chapters
-            updateMessage = "updating episodes with chapters"
-            await dataManager.updateEpisodesWithChapters()
-            updateMessage = "updated episodes with chapters. now handling episodes"
-            
-            // Continue handling episodes
-            dataManager.handleNewEpisodes(episodes: newEpisodes)
-            updateMessage = "starting download"
-            for episode in newEpisodes {
-                downloadManager.startDownload(for: episode)
-            }
-        } catch {
-            print("❌ Error updating episodes: \(error)")
+        updateMessage = "getting new episodes..."
+        let newEpisodes = await feedService.updateAllSubscribedPodcasts()
+        
+        // Updating chapters
+        updateMessage = "updating episodes with chapters"
+        await dataManager.updateEpisodesWithChapters()
+        updateMessage = "updated episodes with chapters. now handling episodes"
+        
+        // Continue handling episodes
+        dataManager.handleNewEpisodes(episodes: newEpisodes)
+        updateMessage = "starting download"
+        for episode in newEpisodes {
+            downloadManager.startDownload(for: episode)
         }
     }
     
@@ -48,8 +44,6 @@ struct ContentView: View {
                                    showFullPlayer: $showFullPlayer,
                                    updateMessage: $updateMessage)
                     .environmentObject(themeManager)
-                    .environmentObject(downloadManager)
-                    .environmentObject(dataManager)
                     .tabItem {
                         Image(systemName: "house")
                         Text("Home")
@@ -58,8 +52,7 @@ struct ContentView: View {
                     .toolbarBackground(.visible, for: .tabBar) //<- here
                     .toolbarBackground(Color(themeManager.selectedTheme.secondoryColor), for: .tabBar)
                 
-                PodcastList()
-                    .environmentObject(themeManager)
+                PodcastList(showFullPlayer: $showFullPlayer)
                     .tabItem {
                         Image(systemName: "books.vertical")
                         Text("Podcasts")
@@ -97,6 +90,8 @@ struct ContentView: View {
             }
             .environmentObject(dataManager)
             .environmentObject(playbackManager)
+            .environmentObject(downloadManager)
+            .environmentObject(themeManager)
             .accentColor(Color(themeManager.selectedTheme.primaryColor))
             .onAppear {
                 Task {

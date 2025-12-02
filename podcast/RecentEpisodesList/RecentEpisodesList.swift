@@ -18,11 +18,9 @@ struct RecentEpisodesList: View {
     @Binding var updateMessage: String
     
     let updateEpisodes: () async -> Void
-    //@ObservedObject private var listModel: UnlistenedEpisodeList
     
     init(updateEpisodes: @escaping () async -> Void, showFullPlayer: Binding<Bool>, updateMessage: Binding<String>) {
         self.updateEpisodes = updateEpisodes
-        //self._listModel = ObservedObject(wrappedValue: listModel)
         self._showFullPlayer = showFullPlayer
         self._updateMessage = updateMessage
     }
@@ -106,7 +104,10 @@ struct RecentEpisodesList: View {
     private func handleEpisodeSelection(_ episode: Episode) {
         Task { @MainActor in
             showFullPlayer = true
-            playbackManager.startPlayingEpisode(episode: episode)
+            playbackManager.loadEpisodeAndPlaylist(
+                episode: episode,
+                playlist: dataManager.unlistenedEpisodes
+            )
         }
     }
 }

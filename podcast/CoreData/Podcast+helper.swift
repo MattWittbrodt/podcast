@@ -108,6 +108,9 @@ extension Podcast {
         entity.imageUrl = channel.imageUrl
         entity.podcastDescription = channel.description
         entity.author = channel.author
+        if let imageData = channel.podcastImageData {
+            entity.imageData = imageData
+        }
         return entity
     }
     

@@ -12,7 +12,7 @@ struct EpisodeListCardImage: View {
     
     var body: some View {
         if let imgData = imageData {
-            Image(uiImage: UIImage(data: imgData)!)
+            Image(uiImage: UIImage(data: imgData) ?? UIImage())
                 .resizable()
                 .frame(width: 100, height: 100, alignment: .topLeading)
                 .cornerRadius(20)
@@ -28,12 +28,11 @@ struct EpisodeListCardImage: View {
 struct EpisodeListCard: View {
     @EnvironmentObject var downloadManager: DownloadManager
     @ObservedObject var episode: Episode
-    // Local state to hold the state received from the publisher
     @State private var downloadState: DownloadState = .notDownloaded
     
     var body: some View {
         HStack{
-            //EpisodeListCardImage(imageData: episode.episode.imageData ?? episode.episode.podcastImgData)
+            EpisodeListCardImage(imageData: episode.getImageData())
             Spacer()
             VStack(alignment: .leading) {
                 Text("\(episode.episodeTitle)")
@@ -48,7 +47,7 @@ struct EpisodeListCard: View {
                     Text("\(episode.formattedDate)")
                         .padding(.leading,3)
                     Spacer()
-                    Text("\(shortTime(seconds: episode.episodeDuration-Int16(episode.lastListenedTime)))")
+                    Text("\(shortTime(seconds: episode.episodeDuration-Int16(episode.lastListened)))")
                         .padding(.leading,3)
                     DownloadStatusView(state: downloadState)
                 }
@@ -58,12 +57,10 @@ struct EpisodeListCard: View {
         .onReceive(
             downloadManager.downloadStatePublisher(for: episode.objectID,
                                                    initialDownloadState: downloadManager.downloadFileExists(for: episode))) { state in
-            //print("✴️ Download state changed for \(String(describing: episode.title)): \(state)")
             // Update the local @State, triggering a view refresh
             downloadState = state
         }
     }
-    
 }
 
 //#Preview {

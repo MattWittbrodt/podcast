@@ -69,24 +69,18 @@ extension Episode {
         return request
     }
     
-    static func allEpisodes(_ predicate: NSPredicate = .all) -> NSFetchRequest<Episode> {
-        let request = Episode.fetchRequest()
-        request.sortDescriptors = [NSSortDescriptor(keyPath: \Episode.publishedDate, ascending: false)]
-        request.predicate = NSPredicate(format: "downloaded == true")
-        return request
+    func getImageData() -> Data? {
+        if self.imageData != nil && self.imageData?.isEmpty == false {
+            return imageData
+        } else if self.podcast?.imageData != nil {
+            return self.podcast?.imageData
+        }
+        return nil
     }
     
     static func handleListened(episode: Episode) async -> downloadDataResponse {
         episode.listened = true
         return await downloadDataUtils.deleteDownloadedFile(episodeId: episode.downloadId)
-    }
-    
-    // Sorted chapters
-    var sortedChapters: [Chapter] {
-        guard let chapters = self.chapters as? Set<Chapter> else {
-            return []
-        }
-        return chapters.sorted { $0.startTime < $1.startTime }
     }
     
     static var example: Episode {
@@ -172,6 +166,9 @@ extension Episode {
         entity.guid = episode.guid
         entity.imageUrl = episode.imageUrl
         entity.publishedDate = episode.episodeDate
+        if let imageData = episode.imageData {
+            entity.imageData = imageData
+        }
         return entity
     }
     
