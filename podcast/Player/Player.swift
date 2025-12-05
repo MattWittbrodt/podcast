@@ -165,7 +165,6 @@ struct EpisodeImageView: View {
     }
 }
 
-
 struct AirPlayButton: UIViewRepresentable {
     var activeTint: UIColor
     
@@ -218,8 +217,7 @@ struct Player: View {
                         .font(.callout)
                         .foregroundStyle(Color(themeManager.selectedTheme.primaryColor)).opacity(0.7)
                     
-//                    PlayerImgNotes<ViewModel>()
-//                        .environmentObject(playerManager)
+
                     EpisodeImageView()
                     
                     // Chapter display and list
@@ -242,10 +240,12 @@ struct Player: View {
                     .padding(.leading, 120)
                     .padding(.trailing, 120)
                                         
+                    Text(playbackManager.currentAudioDeviceName ?? "")
                     AirPlayButton(activeTint: UIColor(Color(themeManager.selectedTheme.primaryColor)))
                         .frame(width: 120, height: 50)
                         .padding(.top, 30)
                         .tint(Color(themeManager.selectedTheme.primaryColor))
+                    
                     
                 }
                 .background(Color(themeManager.selectedTheme.secondoryColor))
@@ -254,11 +254,24 @@ struct Player: View {
         }
 }
 
-//struct Player_Previews: PreviewProvider {
-//    
-//    static var previews: some View {
-//        Player<MockPlayerViewModel>()
-//            .environmentObject(MockPlayerViewModel(context: PersistenceController.preview.container.viewContext))
-//            .environmentObject(ThemeManager())
-//    }
-//}
+#Preview {
+    let dataManager = DataManager.preview
+    let downloadManager = DownloadManager(dataManager: dataManager)
+    let pm = PlaybackManager(downloadManager: downloadManager, dataManager: dataManager)
+    
+    // Create sample in the same context that PlaybackManager uses
+    let episode = Episode.sample(in: dataManager.persistence.viewContext)
+    pm.currentEpisode = episode
+    
+    guard let uiImage = UIImage(systemName: "photo.fill"),
+          let data = uiImage.jpegData(compressionQuality: 1.0) else {
+        fatalError("Mock image 'placeholder_image' not found or could not be converted to Data.")
+    }
+    
+    episode.imageData = data
+    dataManager.saveMainContext()
+    
+    return Player()
+        .environmentObject(pm)
+        .environmentObject(ThemeManager())
+}

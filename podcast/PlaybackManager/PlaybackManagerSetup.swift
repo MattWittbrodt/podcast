@@ -15,26 +15,18 @@ extension PlaybackManager {
             // Configure the audio session category
             let audioSession = AVAudioSession.sharedInstance()
             
-            try audioSession.setCategory(
-                .playback,
-                mode: .spokenAudio, // Optimized for spoken content
-                options: [.allowAirPlay, .allowBluetooth, .allowBluetoothA2DP]
-            )
+            try audioSession.setCategory(.playback, mode: .spokenAudio)
             
             // Activate the session
             try audioSession.setActive(true)
             
             // 3. Setup interruptions handling
-            setupInterruptionHandling()
-            
-            // 4. Setup route change handling
-//            setupRouteChangeHandling()
+            setupNotifications()
             
         } catch {
-            print("Failed to setup audio session: \(error)")
+            print("Failed2 to setup audio session: \(error)")
         }
     }
-        
     
     private func setupNowPlayingInfo() {
         var nowPlayingInfo = [String: Any]()
@@ -95,62 +87,38 @@ extension PlaybackManager {
         }
     }
     
-    private func setupInterruptionHandling() {
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(handleAudioSessionInterruption),
-            name: AVAudioSession.interruptionNotification,
-            object: nil
-        )
+    //MARK: Handle interruptions
+    func setupNotifications() {
+        let nc = NotificationCenter.default
+        nc.addObserver(self,
+                       selector: #selector(handleInterruption),
+                       name: AVAudioSession.interruptionNotification,
+                       object: AVAudioSession.sharedInstance())
     }
     
-    @objc private func handleAudioSessionInterruption(_ notification: Notification) {
+    @objc func handleInterruption(notification: Notification) {
         guard let userInfo = notification.userInfo,
               let typeValue = userInfo[AVAudioSessionInterruptionTypeKey] as? UInt,
               let type = AVAudioSession.InterruptionType(rawValue: typeValue) else {
             return
         }
+        print("Got notification: \(type) - \(userInfo)")
         
         switch type {
             
         case .began:
-            // 🛑 INTERRUPTION STARTED
-            print("Audio interrupted - pausing playback")
-            
-            // Save current playback state
-//            wasPlayingBeforeInterruption = isPlaying
-//            interruptionStartTime = currentTime
-            
-            // Pause playback but keep player ready to resume
-            pause()
-            
-            // Update UI to show paused state
-            playbackState = .paused
-            
+            player?.pause()
+            isPlaying = false
             
         case .ended:
-            // ✅ INTERRUPTION ENDED
             guard let optionsValue = userInfo[AVAudioSessionInterruptionOptionKey] as? UInt else { return }
             let options = AVAudioSession.InterruptionOptions(rawValue: optionsValue)
-            
             if options.contains(.shouldResume) {
-                // 🔊 SHOULD RESUME PLAYBACK
-                print("Interruption ended - resuming playback")
-                
-                // The system wants us to resume (e.g., phone call ended)
-//                play()
-                
-            } else {
-                // 🔇 SHOULD NOT RESUME
-                print("Interruption ended - keeping paused")
-                // User might have explicitly paused during interruption
-                // Or another app took over audio permanently
+                player?.play()
+                isPlaying = true
             }
-            
-        @unknown default:
-            break
+        default: ()
         }
     }
-    
 }
 

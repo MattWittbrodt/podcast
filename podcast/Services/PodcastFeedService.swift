@@ -136,7 +136,6 @@ extension PodcastFeedService {
                             return episode
                         }
                         updateEpisode.imageData = imgData
-                        print("Rss image data: \(updateEpisode.episodeTitle): \(updateEpisode.imageData)")
                         return updateEpisode
                     }
                 }
@@ -144,7 +143,6 @@ extension PodcastFeedService {
                 var processedEpisodes = [RSSEpisode]()
                 for await result in group {
                     let r = result
-                    print("in processed: \(r.episodeTitle) - \(r.imageData)")
                     processedEpisodes.append(r)
                 }
                 return processedEpisodes

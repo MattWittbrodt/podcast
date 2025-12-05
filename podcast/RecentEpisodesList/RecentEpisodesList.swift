@@ -15,14 +15,12 @@ struct RecentEpisodesList: View {
     @EnvironmentObject private var playbackManager: PlaybackManager
     
     @Binding var showFullPlayer: Bool
-    @Binding var updateMessage: String
     
     let updateEpisodes: () async -> Void
     
-    init(updateEpisodes: @escaping () async -> Void, showFullPlayer: Binding<Bool>, updateMessage: Binding<String>) {
+    init(updateEpisodes: @escaping () async -> Void, showFullPlayer: Binding<Bool>) {
         self.updateEpisodes = updateEpisodes
         self._showFullPlayer = showFullPlayer
-        self._updateMessage = updateMessage
     }
     
     var body: some View {
@@ -39,7 +37,6 @@ struct RecentEpisodesList: View {
         GeometryReader { geometry in
             VStack(alignment: .leading, spacing: 16) {
                 header
-                Text(updateMessage)
                 episodeList(in: geometry)
             }
             .padding(.horizontal)
@@ -83,9 +80,16 @@ struct RecentEpisodesList: View {
     }
 
     private func swipeActions(for episode: Episode) -> some View {
-        HStack {  // Using HStack instead of Group provides better type inference
+        HStack {
             Button(action: {
+                // If we want to mark as listened, need to:
+                // (1) update coredata, (2) check if its current episode. If it is, move to next
+                // (3) remove download
                 dataManager.markEpisodeAsListened(episode)
+                if playbackManager.currentEpisode?.objectID == episode.objectID {
+                    playbackManager.handleEpisodeEnd()
+                }
+                downloadManager.removeDownload(for: episode)
             }) {
                 Label("Listened", systemImage: "tray.fill")
             }

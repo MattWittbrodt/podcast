@@ -27,9 +27,10 @@ class PlaybackManager: ObservableObject {
     @Published var episodeChapters: [Chapter]? = nil
     @Published var currentChapter: Chapter?
     @Published var currentEpisodeImageData: Data? = nil
+    @Published var currentAudioDeviceName: String? = nil
     
     // MARK: - Private Properties
-    private var player: AVPlayer?
+    var player: AVPlayer?
     private var timeObserver: Any?
     private var playlistEpisodes: [Episode] = []
     
@@ -240,6 +241,14 @@ extension PlaybackManager {
                 guard let saveFrequency = self?.saveFrequency, let currentEpisode = self?.currentEpisode else { return }
                 if time.seconds - currentEpisode.lastListened > saveFrequency {
                     self?.dataManager.saveEpisodeTime(currentEpisode, time: time.seconds)
+                }
+                
+                if let audioOutput = AVAudioSession.sharedInstance().currentRoute.outputs.first {
+                    if audioOutput.portType == .builtInSpeaker {
+                        self?.currentAudioDeviceName = nil
+                    } else if audioOutput.portName != self?.currentAudioDeviceName {
+                        self?.currentAudioDeviceName = audioOutput.portName
+                    }
                 }
                 
                 // Look for end of episode and handle appropriately

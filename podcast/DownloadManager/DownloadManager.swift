@@ -79,7 +79,6 @@ extension DownloadManager {
             return
         }
         
-        print("Starting download for \(String(describing: episode.title))...")
         let task = urlSession.downloadTask(with: episodeUrl)
         taskMap[task.taskIdentifier] = episode.objectID
         
@@ -122,6 +121,20 @@ extension DownloadManager {
     
     func getFullDownloadPath(for episode: Episode) -> URL? {
         return self.generateStoreFilePath(for: episode)
+    }
+    
+    func removeDownload(for episode: Episode) {
+        guard let episodePath = self.generateStoreFilePath(for: episode) else {
+            print("❌ No file path")
+            return
+        }
+        do {
+            if downloadFileExists(for: episode) {
+                try FileManager.default.removeItem(at: episodePath)
+            }
+        } catch {
+            print("❌ Download not removed")
+        }
     }
 }
 
