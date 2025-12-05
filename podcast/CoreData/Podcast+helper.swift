@@ -55,15 +55,7 @@ extension Podcast {
         }
         try? context.save()
     }
-    
-    static func allSaved(_ predicate: NSPredicate = .all) -> NSFetchRequest<Podcast> {
-        let request = Podcast.fetchRequest()
-        request.sortDescriptors = [NSSortDescriptor(keyPath: \Podcast.title_, ascending: true)]
-        request.predicate = predicate
-                
-        return request
-    }
-    
+        
     static func queryByFeedId(_ feedId: Int32) -> NSFetchRequest<Podcast> {
         let request = Podcast.fetchRequest()
         request.predicate = NSPredicate(format: "feedId == %d", feedId)

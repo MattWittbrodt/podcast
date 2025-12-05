@@ -33,10 +33,9 @@ struct ContentViewFactory {
 
 @main
 struct PodcastApp: App {
-    @StateObject private var playerManager = PlayerViewModel()
+    @Environment(\.scenePhase) var scenePhase
     
     init() {
-        //setupAudioInterruptionObserver(with: playerManager)
         //FirebaseApp.configure()
         setupSharedDirectory()
         UserDefaults.standard.set(0, forKey: "com.apple.CoreData.SQLDebug")
@@ -46,16 +45,6 @@ struct PodcastApp: App {
     var body: some Scene {
         WindowGroup {
             ContentViewFactory.makeContentView()
-                .environmentObject(playerManager)
-                .onAppear {
-                    // Set up audio session
-                    do {
-                        try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
-                        try AVAudioSession.sharedInstance().setActive(true)
-                    } catch {
-                        print("Failed to set up audio session: \(error.localizedDescription)")
-                    }
-                }
         }
     }
 }

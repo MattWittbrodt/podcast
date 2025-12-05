@@ -7,6 +7,7 @@
 import SwiftUI
 
 struct ContentView: View {
+    @Environment(\.scenePhase) var scenePhase
     @StateObject var themeManager = ThemeManager()
     
     @State private var selectedEpisode: Episode?
@@ -21,17 +22,13 @@ struct ContentView: View {
     @StateObject var playbackManager: PlaybackManager
     
     func updateEpisodes() async {
-        updateMessage = "getting new episodes..."
         let newEpisodes = await feedService.updateAllSubscribedPodcasts()
         
         // Updating chapters
-        updateMessage = "updating episodes with chapters"
         await dataManager.updateEpisodesWithChapters()
-        updateMessage = "updated episodes with chapters. now handling episodes"
         
         // Continue handling episodes
         dataManager.handleNewEpisodes(episodes: newEpisodes)
-        updateMessage = "starting download"
         for episode in newEpisodes {
             downloadManager.startDownload(for: episode)
         }
@@ -41,8 +38,7 @@ struct ContentView: View {
         ZStack(alignment: .bottom) {
             TabView {
                 RecentEpisodesList(updateEpisodes: updateEpisodes,
-                                   showFullPlayer: $showFullPlayer,
-                                   updateMessage: $updateMessage)
+                                   showFullPlayer: $showFullPlayer)
                     .environmentObject(themeManager)
                     .tabItem {
                         Image(systemName: "house")
@@ -93,11 +89,6 @@ struct ContentView: View {
             .environmentObject(downloadManager)
             .environmentObject(themeManager)
             .accentColor(Color(themeManager.selectedTheme.primaryColor))
-            .onAppear {
-                Task {
-                    await updateEpisodes()
-                }
-            }
             
             if playbackManager.currentEpisode != nil {
                 MiniPlayerView(showFullPlayer: $showFullPlayer)
@@ -113,6 +104,13 @@ struct ContentView: View {
             Player()
                 .environmentObject(playbackManager)
                 .environmentObject(themeManager)
+        }
+        .onChange(of: scenePhase) { oldValue, newValue in
+            if newValue == .active {
+                Task {
+                    await updateEpisodes()
+                }
+            }
         }
     }
 }

@@ -406,7 +406,7 @@ final class PlayerViewModel: NSObject, ObservableObject {
     func playPause(alwaysPlay: Bool = false) {
         guard let player = player else { return }
         print("Playpause: \(self.playerState) - \(self.currentEpisode?.title ?? "No episode")")
-        if player.isPlaying && !alwaysPlay {
+        if true && !alwaysPlay {
             player.pause()
             playerState = PlayerState.paused
             updateNowPlayingInfo()
