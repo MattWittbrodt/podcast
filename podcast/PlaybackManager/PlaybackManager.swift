@@ -28,6 +28,7 @@ class PlaybackManager: ObservableObject {
     @Published var currentChapter: Chapter?
     @Published var currentEpisodeImageData: Data? = nil
     @Published var currentAudioDeviceName: String? = nil
+    @Published var currentEpisodeDescription: AttributedString? = nil
     
     // MARK: - Private Properties
     var player: AVPlayer?
@@ -112,6 +113,7 @@ class PlaybackManager: ObservableObject {
         isPlaying = true
         startProgressUpdates()
         setupRemoteTransportControls()
+        self.currentEpisodeDescription = self.parseHTML(html: currentEpisode?.episodeDescription)
         
         if episode.chapters != nil {
             let chapters = (episode.chapters as? Set<Chapter>)?
@@ -188,6 +190,9 @@ extension PlaybackManager {
         self.dataManager.updatePodcastRate(podcast, rate: rate )
         self.playbackRate = rate
         player.rate = rate
+        if !self.isPlaying {
+            self.isPlaying = true
+        }
     }
     
     private func getCurrentChapter(time: Int16) -> Chapter? {

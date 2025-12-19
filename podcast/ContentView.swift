@@ -104,6 +104,7 @@ struct ContentView: View {
             Player()
                 .environmentObject(playbackManager)
                 .environmentObject(themeManager)
+                .presentationDragIndicator(.visible)
         }
         .onChange(of: scenePhase) { oldValue, newValue in
             if newValue == .active {

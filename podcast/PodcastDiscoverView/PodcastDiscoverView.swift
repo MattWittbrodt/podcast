@@ -15,8 +15,8 @@ struct PodcastDiscoverView: View {
     var body: some View {
         VStack {
             VStack {
-                Text("\(String(describing: discoveryManager.selectedPodcast?.title))").font(.headline)
-                Text("\(String(describing: discoveryManager.selectedPodcast?.author))").font(.subheadline)
+                Text("\(String(describing: discoveryManager.selectedPodcast?.podcast.title))").font(.headline)
+                Text("\(String(describing: discoveryManager.selectedPodcast?.podcast.author))").font(.subheadline)
                 Button {
                     discoveryManager.subscribeToPodcast()
                 }
@@ -25,7 +25,7 @@ struct PodcastDiscoverView: View {
                 }
                 .padding()
             }
-            Text("\(String(describing: discoveryManager.selectedPodcast?.description))")
+            Text("\(String(describing: discoveryManager.selectedPodcast?.podcast.description))")
                 .lineLimit(3)
             episodeList
         }

@@ -11,7 +11,7 @@ import CryptoKit
 class DiscoveryManager: ObservableObject {
     @Published var searchResults: [PodcastIndexInfo] = []
     @Published var rssChannel: RSSChannel? = nil
-    @Published var selectedPodcast: PodcastIndexInfo? = nil
+    @Published var selectedPodcast: IdentifiablePodcast? = nil
     
     private let searchService: PodcastSearchService
     private let dataManager: DataManager
@@ -20,10 +20,13 @@ class DiscoveryManager: ObservableObject {
         self.searchService = searchService
         self.dataManager = dataManager
     }
+}
+
+// MARK: Public API
+extension DiscoveryManager {
     
     @MainActor
     func search(term: String) async {
-        print("Searching for \(term)")
         guard !term.isEmpty else {
             searchResults = []
             return
@@ -36,6 +39,36 @@ class DiscoveryManager: ObservableObject {
         }
     }
     
+    @MainActor
+    func parseKnownPodcast(feedUrl: String) async {
+        await self.parseRssFeed(feedUrl: feedUrl)
+        
+        guard let rssChannel = rssChannel else {
+            print("Bad parsing")
+            return
+        }
+        
+        // Then show the sheet
+        await MainActor.run {
+            selectedPodcast = IdentifiablePodcast(rssChannel)
+        }
+    }
+    
+    func subscribeToPodcast() {
+        guard let url = selectedPodcast?.podcast.rssUrl(),
+              let channel = rssChannel
+        else {
+            print("No url or channel found")
+            return
+        }
+        Task { @MainActor in
+            dataManager.subscribeToPodcast(feedUrl: url, channel: channel )
+        }
+    }
+}
+
+// private API
+private extension DiscoveryManager {
     func parseRssFeed(feedUrl: String) async {
         
         guard let url = URL(string: feedUrl.upgradeToHTTPS ?? "") else {
@@ -54,18 +87,6 @@ class DiscoveryManager: ObservableObject {
             }
         } catch {
             print("Error decoding rss")
-        }
-    }
-    
-    func subscribeToPodcast() {
-        guard let url = selectedPodcast?.url,
-              let channel = rssChannel
-        else {
-            print("No url or channel found")
-            return
-        }
-        Task { @MainActor in
-            dataManager.subscribeToPodcast(feedUrl: url, channel: channel )
         }
     }
 }

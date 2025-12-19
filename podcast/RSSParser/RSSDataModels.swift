@@ -18,7 +18,7 @@ struct Enclosure: Codable {
 }
 
 // MARK: - Data Models
-struct RSSChannel: Codable {
+struct RSSChannel: Codable, PresentationPodcast {
     let title: String
     let link: String
     let author: String
@@ -26,6 +26,8 @@ struct RSSChannel: Codable {
     let imageUrl: String
     var items: [RSSEpisode]
     var podcastImageData: Data?
+    
+    func rssUrl() -> String { link }
 }
 
 struct RSSEpisode: Identifiable, Codable {
