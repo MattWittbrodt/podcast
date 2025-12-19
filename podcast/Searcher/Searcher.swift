@@ -83,23 +83,17 @@ struct SearcherView: View {
                 .padding()
                 .foregroundStyle(themeManager.selectedTheme.primaryColor)
             
-//            Button("Search") {
-//                withAnimation {
-//                    Task {
-//                        do {
-//                            let podcastInfo = try await PodcastInfo.from_rss(url: rssAdditionText)
-//                            selectedItem = podcastInfo
-//                        } catch {
-//                            alertMessage = "\(error)"
-//                            showAlert = true
-//                        }
-//                    }
-//                    showTextField = false
-//                }
-//            }
-//            .buttonStyle(.borderedProminent)
-//            .foregroundStyle(themeManager.selectedTheme.secondoryColor)
-//            .tint(themeManager.selectedTheme.primaryColor)
+            Button("Search") {
+                withAnimation {
+                    Task {
+                        await discoveryManager.parseKnownPodcast(feedUrl: rssAdditionText)
+                    }
+                    showTextField = false
+                }
+            }
+            .buttonStyle(.borderedProminent)
+            .foregroundStyle(themeManager.selectedTheme.secondoryColor)
+            .tint(themeManager.selectedTheme.primaryColor)
         }
         .padding()
         .background(.thickMaterial)
@@ -125,10 +119,10 @@ struct SearcherView: View {
             }
         }
         .background(
-            RoundedRectangle(cornerRadius: 3) // Adjust corner radius as needed
+            RoundedRectangle(cornerRadius: 2) // Adjust corner radius as needed
                 .fill(.white) // Background color
                 .overlay(
-                    RoundedRectangle(cornerRadius: 3)
+                    RoundedRectangle(cornerRadius: 2)
                         .stroke(themeManager.selectedTheme.primaryColor, lineWidth: 3) // Border
                 )
         )
@@ -158,34 +152,9 @@ struct SearcherView: View {
     
     private func handleItemSelection(_ item: PodcastIndexInfo) async {
         // Perform your operation first
-        await discoveryManager.parseRssFeed(feedUrl: item.url)
-        
-        // Then show the sheet
-        await MainActor.run {
-            discoveryManager.selectedPodcast = item
-        }
+        await discoveryManager.parseKnownPodcast(feedUrl: item.rssUrl())
     }
     
-    
-//    private var searchResultsList: some View {
-//        NavigationStack {
-//            List(viewModel.searchResults) { searchResult in
-//                PodcastRow(searchResult: searchResult) {
-//                    selectedItem = searchResult
-//                }
-//                .background(themeManager.selectedTheme.secondoryColor)
-//                .foregroundStyle(themeManager.selectedTheme.primaryColor)
-//                .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
-//                .listRowBackground(Color.clear)
-//            }
-//            .background(themeManager.selectedTheme.secondoryColor)
-//        }
-//        .listStyle(.plain)
-//        .sheet(item: $selectedItem) { item in
-//            PodcastIntro(podcast: item)
-//                .environment(\.managedObjectContext, context)
-//        }
-//    }
 }
 
 // Extracted subview for better organization

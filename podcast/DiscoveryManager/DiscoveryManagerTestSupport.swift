@@ -17,7 +17,7 @@ extension DiscoveryManager {
         
         // Mock selected podcast
         manager.rssChannel = RSSChannel.example
-        manager.selectedPodcast = PodcastIndexInfo.example
+        manager.selectedPodcast = IdentifiablePodcast(PodcastIndexInfo.example)
         
         return manager
     }

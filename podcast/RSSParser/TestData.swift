@@ -30,7 +30,7 @@ extension RSSChannel {
         return [
         RSSEpisode(episodeTitle: "1807 - \"Keyboard Warrior\"",
                     link: "http://1807.noagendanotes.com",
-                    displayDescription: "This is the episode",
+                    displayDescription: "Deconstructing Media with No Agenda, by Adam Curry and John C. DvorakDeconstructing Media with No Agenda, by Adam Curry and John C. Dvorak<p><strong>No Agenda Epsiode 1807 Live Sunday October 12th 2025 </strong><strong>Living Large and LIT!</strong></p>\n<p><strong>Boost us!</strong></p>\n<p><strong>Get a modern app at podcastapps.com</strong></p>\n<p>&nbsp;</p>",
                     guid: "http://1807.noagendanotes.com",
                     imageUrl: "https://noagendaassets.com/enc/1760304785.269_na-1807-art-feed.jpg",
                     episodeDate: dateFormatter.date(from: "2025-10-12 21:41:37")!,

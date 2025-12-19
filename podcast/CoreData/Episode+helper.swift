@@ -186,7 +186,6 @@ extension Episode {
 #if DEBUG
 extension Episode {
     static func sample(in context: NSManagedObjectContext) -> Episode {
-        print("Creating sample episode")
         return create(from: RSSChannel.exampleEpisodes[0], context: context)
     }
 }

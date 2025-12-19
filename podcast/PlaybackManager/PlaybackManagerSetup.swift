@@ -114,7 +114,7 @@ extension PlaybackManager {
             guard let optionsValue = userInfo[AVAudioSessionInterruptionOptionKey] as? UInt else { return }
             let options = AVAudioSession.InterruptionOptions(rawValue: optionsValue)
             if options.contains(.shouldResume) {
-                player?.play()
+                player?.rate = self.playbackRate
                 isPlaying = true
             }
         default: ()

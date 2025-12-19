@@ -14,16 +14,19 @@ enum SearcherError: Error {
     case decodingError(String)
 }
 
-struct PodcastIndexInfo: Identifiable, Hashable, Codable {
+struct PodcastIndexInfo: Identifiable, Hashable, Codable, PresentationPodcast {
     let id: Int
     let title: String
     let image: String
     let author: String
     let description: String
     let url: String
+    
+    func rssUrl() -> String { url }
 }
 
 extension PodcastIndexInfo {
+        
     static var example: PodcastIndexInfo {
         PodcastIndexInfo (
             id: 41504,

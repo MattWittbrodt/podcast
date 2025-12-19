@@ -106,59 +106,29 @@ struct PlayerControlsView: View {
 }
 
 
-//struct PlayerImgNotes<ViewModel: PlayerViewModelProtocol>: View {
-//    @EnvironmentObject var playerManager: ViewModel
-//    @EnvironmentObject var themeManager: ThemeManager
-//    @State private var currentPage: Int = 0
-//    
-//    private let spacing: CGFloat = 7
-//    private let pageIndicatorTintColor = Color.gray.opacity(0.5)
-//        
-//    var body: some View {
-//        VStack(spacing: spacing) {
-//            GeometryReader { geometry in
-//                TabView(selection: $currentPage) {
-//                    PlayerImageHandler<ViewModel>()
-//                        .environmentObject(playerManager)
-//                        .tag(0)
-//                        .frame(width: geometry.size.width)
-//                    
-//                    PlayerEpisodeDescriptionView(html: playerManager.currentEpisode?.displayDescription ?? "",
-//                                                 theme: themeManager)
-//                    .tag(1)
-//                    .frame(width: geometry.size.width)
-//                }
-//                .tabViewStyle(.page(indexDisplayMode: .never))
-//                .frame(height: 300)
-//                .padding(.bottom, 15)
-//            }
-//            
-//            // Page indicators
-//            HStack(spacing: spacing) {
-//                ForEach(0..<2, id: \.self) { index in
-//                    Circle()
-//                        .fill(index == currentPage ? themeManager.selectedTheme.primaryColor.opacity(0.8) : pageIndicatorTintColor)
-//                        .frame(width: 8, height: 8)
-//                        .onTapGesture {
-//                            withAnimation {
-//                                currentPage = index
-//                            }
-//                        }
-//                }
-//            }
-//        }
-//    }
-//}
-
 struct EpisodeImageView: View {
     @EnvironmentObject var playbackManager: PlaybackManager
-        
+    @Binding var showDescriptions: Bool
+    
+    init(showDescriptions: Binding<Bool>) {
+        _showDescriptions = showDescriptions
+    }
+    
     var body: some View {
         if let imgData = playbackManager.currentEpisodeImageData, let uIImg = UIImage(data: imgData) {
-            Image(uiImage: uIImg)
-                .resizable()
-                .frame(width: 300, height: 300)
-                .cornerRadius(25)
+            if !showDescriptions {
+                Image(uiImage: uIImg)
+                    .resizable()
+                    .frame(width: 300, height: 300)
+                    .cornerRadius(25)
+            } else {
+                Image(uiImage: uIImg) // Displays a generic photo icon
+                    .resizable()
+                    .frame(width: 50, height: 50)
+                    .cornerRadius(5)
+                    .animation(.linear)
+
+            }
         } else {
             EmptyView()
         }
@@ -185,10 +155,11 @@ struct AirPlayButton: UIViewRepresentable {
     }
 }
     
-
 struct Player: View {
     @EnvironmentObject var themeManager: ThemeManager
     @EnvironmentObject var playbackManager: PlaybackManager
+    
+    @State var showEpisodeNotes: Bool = false
     
 //    private var bookmarkButton: some View {
 //        Button {
@@ -217,13 +188,18 @@ struct Player: View {
                         .font(.callout)
                         .foregroundStyle(Color(themeManager.selectedTheme.primaryColor)).opacity(0.7)
                     
-
-                    EpisodeImageView()
+                    PlayerNotesAndImage(showDescription: $showEpisodeNotes)
+                        .onTapGesture {
+                            withAnimation(.linear(duration: 0.1)) {
+                                showEpisodeNotes.toggle()
+                            }
+                        }
                     
                     // Chapter display and list
                     PlayerChapters()
                         .environmentObject(playbackManager)
                         .environmentObject(themeManager)
+                        .presentationDragIndicator(.visible)
                     
                     // Player controls
                     PlayerControlsView().padding(30)
@@ -235,18 +211,30 @@ struct Player: View {
                             .environmentObject(playbackManager)
                             .foregroundStyle(Color(themeManager.selectedTheme.primaryColor))
                         Spacer()
-                        //bookmarkButton
+                        HStack {
+                            if let deviceName = playbackManager.currentAudioDeviceName {
+                                HStack{
+                                    AirPlayButton(activeTint: UIColor(Color(themeManager.selectedTheme.primaryColor)))
+                                        .frame(height: 15)
+                                        .tint(Color(themeManager.selectedTheme.primaryColor))
+                                    Text(deviceName)
+                                        .fontWeight(.thin)
+                                        .font(.footnote)
+                                }
+                            } else {
+                                AirPlayButton(activeTint: UIColor(Color(themeManager.selectedTheme.primaryColor)))
+                                    .frame(height: 50)
+                                    .tint(Color(themeManager.selectedTheme.primaryColor))
+                            }
+                        }
+                        Spacer()
+                        Button {
+                            withAnimation(.linear(duration: 0.1)) {
+                                showEpisodeNotes.toggle()
+                            }
+                        } label: {Image(systemName: "info.circle")}
                     }
-                    .padding(.leading, 120)
-                    .padding(.trailing, 120)
-                                        
-                    Text(playbackManager.currentAudioDeviceName ?? "")
-                    AirPlayButton(activeTint: UIColor(Color(themeManager.selectedTheme.primaryColor)))
-                        .frame(width: 120, height: 50)
-                        .padding(.top, 30)
-                        .tint(Color(themeManager.selectedTheme.primaryColor))
-                    
-                    
+                    .padding([.leading, .trailing], 50)
                 }
                 .background(Color(themeManager.selectedTheme.secondoryColor))
                 .foregroundStyle(Color(themeManager.selectedTheme.primaryColor))
@@ -254,7 +242,27 @@ struct Player: View {
         }
 }
 
+struct PlayerNotesAndImage: View {
+    @EnvironmentObject var playbackManager: PlaybackManager
+    @Binding var showDescription: Bool
+    
+    init(showDescription: Binding<Bool>) {
+        _showDescription = showDescription
+    }
+    
+    var body: some View {
+        VStack {
+            EpisodeImageView(showDescriptions: $showDescription)
+            if showDescription {
+                PlayerEpisodeDescriptionView(
+                    html: playbackManager.currentEpisodeDescription ?? "Bad")
+            }
+        }
+    }
+}
+
 #Preview {
+    
     let dataManager = DataManager.preview
     let downloadManager = DownloadManager(dataManager: dataManager)
     let pm = PlaybackManager(downloadManager: downloadManager, dataManager: dataManager)
@@ -262,14 +270,16 @@ struct Player: View {
     // Create sample in the same context that PlaybackManager uses
     let episode = Episode.sample(in: dataManager.persistence.viewContext)
     pm.currentEpisode = episode
+    pm.currentEpisodeDescription = pm.parseHTML(html: episode.episodeDescription)
     
-    guard let uiImage = UIImage(systemName: "photo.fill"),
+    guard let uiImage = UIImage(systemName: "photo.fill")?
+        .withTintColor(.gray),
           let data = uiImage.jpegData(compressionQuality: 1.0) else {
         fatalError("Mock image 'placeholder_image' not found or could not be converted to Data.")
     }
     
     episode.imageData = data
-    dataManager.saveMainContext()
+    pm.currentEpisodeImageData = data
     
     return Player()
         .environmentObject(pm)
