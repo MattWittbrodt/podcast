@@ -18,13 +18,11 @@ struct MiniPlayerView: View {
             })
             {
                 HStack {
-                    if let image = playbackManager.currentEpisodeImageData {
-                        if let idata = UIImage(data: image) {
-                            Image(uiImage: idata)
-                                .resizable()
-                                .frame(width: 45, height: 45)
-                                .cornerRadius(4)
-                        }
+                    if let image = playbackManager.currentEpisodeImage {
+                        Image(uiImage: image)
+                            .resizable()
+                            .frame(width: 45, height: 45)
+                            .cornerRadius(4)
                     }
                     
                     VStack(alignment: .leading) {

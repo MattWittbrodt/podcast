@@ -23,6 +23,9 @@ struct PodcastIndexInfo: Identifiable, Hashable, Codable, PresentationPodcast {
     let url: String
     
     func rssUrl() -> String { url }
+    func imageLink() -> String {
+        image
+    }
 }
 
 extension PodcastIndexInfo {

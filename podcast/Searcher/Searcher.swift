@@ -97,7 +97,7 @@ struct SearcherView: View {
         }
         .padding()
         .background(.thickMaterial)
-        .cornerRadius(10)
+        .cornerRadius(20)
         .shadow(radius: 10)
         .frame(width: 300)
         .transition(.scale.combined(with: .opacity))
@@ -144,6 +144,7 @@ struct SearcherView: View {
             .listRowBackground(Color.clear)
         }
         .listStyle(.plain)
+    
         .sheet(item: $discoveryManager.selectedPodcast) { _ in
             PodcastDiscoverView()
                 .environmentObject(discoveryManager)
@@ -163,21 +164,19 @@ struct PodcastRow: View {
     let action: () -> Void
     
     var body: some View {
-        NavigationLink(value: searchResult) {
-            PodcastListCard(
-                title: searchResult.title,
-                author: searchResult.author,
-                image: searchResult.image
-            )
-        }
+        PodcastListCard(
+            title: searchResult.title,
+            author: searchResult.author,
+            image: searchResult.image
+        )
         .onTapGesture(perform: action)
     }
 }
 
-//#Preview {
-//    let dm = DataManager.preview
-//    let discovery = DiscoveryManager(dataManager: dm)
-//    SearcherView()
-//        .environmentObject(discovery)
-//        .environmentObject(ThemeManager())
-//}
+#Preview {
+    let dm = DataManager.preview
+    let discovery = DiscoveryManager(dataManager: dm)
+    SearcherView()
+        .environmentObject(discovery)
+        .environmentObject(ThemeManager())
+}

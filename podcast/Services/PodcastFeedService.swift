@@ -27,7 +27,6 @@ class PodcastFeedService: ObservableObject {
     }
     
     func updateAllSubscribedPodcasts() async -> [Episode] {
-        print("FeedService: starting full sync on launch")
         do {
             let feeds = try await dataManager.loadSuscribedPodcasts()
             
@@ -113,13 +112,14 @@ extension PodcastFeedService {
         return nil
     }
     
+    @MainActor
     private func fetchNewEpisodes(for podcast: Podcast) async -> [Episode] {
         guard let url = URL(string: podcast.feedUrl?.upgradeToHTTPS ?? "") else {return []}
                 
         do {
             let parser = RSSFeedParser()
             let channel = try await parser.parse(from: url)
-            
+        
             // Updates podcast fields
             await updatePodcast(podcast, channel: channel)
             

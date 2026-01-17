@@ -44,8 +44,6 @@ struct PlayerMenu: View {
             Image(systemName: "chevron.down")
                 .font(.caption2)
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 6)
         .background(Color.gray.opacity(0.1))
         .cornerRadius(8)
     }
@@ -69,7 +67,7 @@ struct PlayerControlsView: View {
                 }
             )
             .tint(themeManager.selectedTheme.primaryColor)
-            .padding(.horizontal)
+            
             HStack {
                 Text("\(playbackManager.currentTimeString)")
                     .fontWeight(.semibold)
@@ -77,7 +75,7 @@ struct PlayerControlsView: View {
                 Text("- \(formattedTime(time: Double(playbackManager.duration)-playbackManager.currentTime))")
                     .fontWeight(.semibold)
             }
-            .padding()
+            .padding(.bottom, 20)
             
             HStack {
                 Button(action: { playbackManager.skipBackward(seconds: 30) }) {
@@ -97,10 +95,8 @@ struct PlayerControlsView: View {
                         .resizable()
                         .frame(width: 40, height: 45 )
                 }
-                
             }
-            .padding(.leading, 75)
-            .padding(.trailing, 75)
+            .padding([.leading, .trailing], 50)
         }
     }
 }
@@ -115,19 +111,18 @@ struct EpisodeImageView: View {
     }
     
     var body: some View {
-        if let imgData = playbackManager.currentEpisodeImageData, let uIImg = UIImage(data: imgData) {
+        if let uIImg = playbackManager.currentEpisodeImage {
             if !showDescriptions {
                 Image(uiImage: uIImg)
                     .resizable()
                     .frame(width: 300, height: 300)
                     .cornerRadius(25)
             } else {
-                Image(uiImage: uIImg) // Displays a generic photo icon
+                Image(uiImage: uIImg)
                     .resizable()
                     .frame(width: 50, height: 50)
                     .cornerRadius(5)
                     .animation(.linear)
-
             }
         } else {
             EmptyView()
@@ -160,26 +155,16 @@ struct Player: View {
     @EnvironmentObject var playbackManager: PlaybackManager
     
     @State var showEpisodeNotes: Bool = false
-    
-//    private var bookmarkButton: some View {
-//        Button {
-//            playerManager.saveBookmark()
-//        } label: {
-//            Image(systemName: "bookmark.square")
-//                .resizable()
-//                .frame(width: 30, height: 30)
-//                .opacity(0.85)
-//        }
-//    }
-    
+        
     var body: some View {
         Color(themeManager.selectedTheme.secondoryColor)
             .ignoresSafeArea(.all)
             .overlay(
                 VStack {
+                    Spacer()
                     Text(playbackManager.currentEpisode?.title ?? "No episode selected").lineLimit(1)
                         .font(.title3)
-                        .fontWeight(.medium)
+                        .fontWeight(.regular)
                         .padding(.leading, 10)
                         .padding(.trailing, 10)
                         .padding(.top, 15)
@@ -187,7 +172,7 @@ struct Player: View {
                     Text(playbackManager.currentEpisode?.podcast?.title ?? "Podcast")
                         .font(.callout)
                         .foregroundStyle(Color(themeManager.selectedTheme.primaryColor)).opacity(0.7)
-                    
+                    Spacer()
                     PlayerNotesAndImage(showDescription: $showEpisodeNotes)
                         .onTapGesture {
                             withAnimation(.linear(duration: 0.1)) {
@@ -200,41 +185,18 @@ struct Player: View {
                         .environmentObject(playbackManager)
                         .environmentObject(themeManager)
                         .presentationDragIndicator(.visible)
+                        .padding(.top, 40)
                     
                     // Player controls
-                    PlayerControlsView().padding(30)
-                        .foregroundStyle(Color(themeManager.selectedTheme.primaryColor))
-                    
-                    // Playback rate menu
-                    HStack {
-                        PlayerMenu()
-                            .environmentObject(playbackManager)
+                    Spacer()
+                    VStack{
+                        PlayerControlsView()
+                            .padding([.leading, .trailing], 30)
                             .foregroundStyle(Color(themeManager.selectedTheme.primaryColor))
-                        Spacer()
-                        HStack {
-                            if let deviceName = playbackManager.currentAudioDeviceName {
-                                HStack{
-                                    AirPlayButton(activeTint: UIColor(Color(themeManager.selectedTheme.primaryColor)))
-                                        .frame(height: 15)
-                                        .tint(Color(themeManager.selectedTheme.primaryColor))
-                                    Text(deviceName)
-                                        .fontWeight(.thin)
-                                        .font(.footnote)
-                                }
-                            } else {
-                                AirPlayButton(activeTint: UIColor(Color(themeManager.selectedTheme.primaryColor)))
-                                    .frame(height: 50)
-                                    .tint(Color(themeManager.selectedTheme.primaryColor))
-                            }
-                        }
-                        Spacer()
-                        Button {
-                            withAnimation(.linear(duration: 0.1)) {
-                                showEpisodeNotes.toggle()
-                            }
-                        } label: {Image(systemName: "info.circle")}
+                        PlayerOptionsView(showDescription: $showEpisodeNotes)
+                            .padding([.leading, .trailing], 30)
+                            .padding(.top, 45)
                     }
-                    .padding([.leading, .trailing], 50)
                 }
                 .background(Color(themeManager.selectedTheme.secondoryColor))
                 .foregroundStyle(Color(themeManager.selectedTheme.primaryColor))
@@ -271,7 +233,7 @@ struct PlayerNotesAndImage: View {
     let episode = Episode.sample(in: dataManager.persistence.viewContext)
     pm.currentEpisode = episode
     pm.currentEpisodeDescription = pm.parseHTML(html: episode.episodeDescription)
-    
+    pm.currentAudioDeviceName = "Test Device"
     guard let uiImage = UIImage(systemName: "photo.fill")?
         .withTintColor(.gray),
           let data = uiImage.jpegData(compressionQuality: 1.0) else {
@@ -279,7 +241,12 @@ struct PlayerNotesAndImage: View {
     }
     
     episode.imageData = data
-    pm.currentEpisodeImageData = data
+    pm.currentEpisodeImage = uiImage
+    
+    let sampleChapter = Chapter.sample(in: dataManager.persistence.viewContext)
+    
+    pm.currentChapter = sampleChapter
+    pm.episodeChapters = [sampleChapter]
     
     return Player()
         .environmentObject(pm)

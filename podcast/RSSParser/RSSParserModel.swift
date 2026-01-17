@@ -20,6 +20,8 @@ actor RSSFeedParser {
     func parse(xmlData: Data) async throws -> RSSChannel {
         try await withCheckedThrowingContinuation { continuation in
             let parser = XMLParser(data: xmlData)
+            parser.shouldProcessNamespaces = true
+            parser.shouldReportNamespacePrefixes = true
             let delegate = ParserDelegate(dateFormatter: dateFormatter) { result in
                 continuation.resume(with: result)
             }
@@ -43,16 +45,17 @@ actor RSSFeedParser {
         func parser(_ parser: XMLParser, didStartElement elementName: String,
                    namespaceURI: String?, qualifiedName qName: String?,
                    attributes attributeDict: [String : String] = [:]) {
-            currentElement = elementName
+            let element = qName ?? elementName
+            currentElement = element
             
             // If we are in an item, then instantiate an item builder
             if elementName == "item" {
                 currentItemBuilder = RSSEpisodeBuilder(dateFormatter: dateFormatter)
-            } else if elementName == "podcast:chapters" || qName?.contains("podcast:chapters") == true {
+            } else if element == "podcast:chapters" || qName?.contains("podcast:chapters") == true {
                 currentItemBuilder?.setChapters(url: attributeDict["url"])
-            } else if elementName == "enclosure" {
+            } else if element == "enclosure" {
                 currentItemBuilder?.setEnclosure(url: attributeDict["url"])
-            } else if elementName == "itunes:image" {
+            } else if element == "itunes:image" {
                 let imageUrl = attributeDict["href"]
                 
                 // Sometimes this field can occur in the channel section as well
@@ -60,6 +63,12 @@ actor RSSFeedParser {
                     currentItemBuilder?.setImage(url: imageUrl)
                 } else if let imageUrl = imageUrl {
                     channelBuilder.addValue(imageUrl, for: elementName)
+                }
+            } else if element == "atom:link" {
+                if let href = attributeDict["href"] {
+                    if currentItemBuilder == nil {
+                        channelBuilder.addValue(href, for: element)
+                    }
                 }
             }
         }
@@ -105,16 +114,25 @@ private struct RSSChannelBuilder {
     private var items: [RSSEpisode] = []
     private var currentElement: String?
     private var itunesImage = ""
+    private var usedatomLink: Bool = false
     
     mutating func addValue(_ value: String, for element: String) {
         if element == "title" && title != "" {
             return
         }
-        
+                
         switch element {
         case "title": title += value
         case "itunes:author": author += value
-        case "link": link += value
+        case "link":
+            if value != link && !usedatomLink {
+                link += value
+            }
+        case "atom:link":
+            if !value.isEmpty {
+                link = value
+            }
+            usedatomLink = true
         case "description": description += value
         case "url": imageUrl += value
         case "itunes:image": itunesImage += value

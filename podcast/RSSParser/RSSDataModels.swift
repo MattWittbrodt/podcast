@@ -27,10 +27,11 @@ struct RSSChannel: Codable, PresentationPodcast {
     var items: [RSSEpisode]
     var podcastImageData: Data?
     
-    func rssUrl() -> String { link }
+    func rssUrl() -> String { print("rsslink: \(title) - \(link)"); return link }
+    func imageLink() -> String { imageUrl }
 }
 
-struct RSSEpisode: Identifiable, Codable {
+struct RSSEpisode: Identifiable, Codable, PresentationEpisode {
                         
     let id = UUID()
     let episodeTitle: String
@@ -54,8 +55,11 @@ struct RSSEpisode: Identifiable, Codable {
         case episodeTitle, link, displayDescription, episodeDate, guid, chapters, imageUrl, episodeDuration, enclosureUrl, chaptersUrl, podcastImgData
     }
     
-//    mutating func addImageData() async {
-//        self.imageData = try? await loadImageFromWeb(url: imageUrl)
-//    }
+    func description() -> String { displayDescription }
     
+    func date() -> Date { episodeDate }
+    
+    func presentationDuration() -> String {
+        shortTime(seconds: episodeDuration)
+    }    
 }

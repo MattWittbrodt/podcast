@@ -15,19 +15,23 @@ struct PlayerChapters: View {
     var body: some View {
         if let chapters = playbackManager.episodeChapters,
                    let chapter = playbackManager.currentChapter {
-            //let _ = print("Chapter title: \(chapter.title)")
-            Text("\(chapter.title ?? "Missing title")")
-                .onTapGesture { showSheet = true }
-                .sheet(isPresented: $showSheet) {
-                    ChapterListView(
-                        chapters: chapters,
-                        currentChapterStartTime: chapter.startTime,
-                        onChapterSelected: { time in
-                            playbackManager.seek(seconds: Int64(time))
-                        }
-                    )
-                    .environmentObject(themeManager)
-                }
+            HStack{
+                Image(systemName: "list.dash")
+                Text("\(chapter.title ?? "Missing title")")
+                    .fontDesign(.rounded)
+                    .fontWeight(.medium)
+            }
+            .onTapGesture { showSheet = true }
+            .sheet(isPresented: $showSheet) {
+                ChapterListView(
+                    chapters: chapters,
+                    currentChapterStartTime: chapter.startTime,
+                    onChapterSelected: { time in
+                        playbackManager.seek(seconds: Int64(time))
+                    }
+                )
+                .environmentObject(themeManager)
+            }
         }
     }
 }
@@ -89,41 +93,6 @@ struct ChapterListView: View {
         }
     }
 }
-    
-
-//    var body: some View {
-//        ScrollViewReader { proxy in
-//            ScrollView {
-//                LazyVStack(spacing: 12) {
-//                    ForEach(chapters, id: \.startTime) { chapter in
-//                        Button(action: {
-//                            onChapterSelected(Double(chapter.startTime))
-//                        }) {
-//                            ChapterRow(
-//                                chapter: chapter,
-//                                isCurrent: chapter.startTime == currentChapterStartTime
-//                            )
-//                            .environmentObject(themeManager)
-//                        }
-//                        .id(chapter.startTime)
-//                    }
-//                }
-//                .background(Color(themeManager.selectedTheme.secondoryColor).opacity(0.85))
-//                .padding(.vertical)
-//            }
-//            .onAppear {
-//                // Scroll to current chapter with animation after slight delay
-//                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-//                    withAnimation {
-//                        proxy.scrollTo(currentChapterStartTime, anchor: .center)
-//                    }
-//                }
-//            }
-//            .presentationDetents([.medium, .large])
-//            .presentationDragIndicator(.visible)
-//        }
-//    }
-//}
 
 struct ChapterRow: View {
     @EnvironmentObject var themeManager: ThemeManager

@@ -42,6 +42,17 @@ extension Chapter {
         return chapterObj
     }
     
+    #if DEBUG
+    static func sample(in context: NSManagedObjectContext) -> Chapter {
+        return Chapter(imageData: nil,
+                       imageUrl: "https://static.noagendaartgenerator.com/thumbnails/2025/05/blue-acorn-best-of-memorial-day-edition_5KF3VssP.jpg",
+                       startTime: 0,
+                       title: "Sample Chapter",
+                       context: context
+        )
+    }
+    #endif
+    
 //    static var example: Chapter {
 //        let context = PersistenceController.shared.container.viewContext
 //        return Chapter(

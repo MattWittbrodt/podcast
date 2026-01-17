@@ -41,6 +41,7 @@ extension DiscoveryManager {
     
     @MainActor
     func parseKnownPodcast(feedUrl: String) async {
+        print("ParseKnown: \(feedUrl)")
         await self.parseRssFeed(feedUrl: feedUrl)
         
         guard let rssChannel = rssChannel else {

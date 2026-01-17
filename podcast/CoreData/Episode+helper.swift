@@ -40,11 +40,8 @@ extension Episode {
     }
     
     var formattedDate: String {
-        publishedDate.map {
-            let formatter = DateFormatter()
-            formatter.dateFormat = "MMM d"
-            return formatter.string(from: $0)
-        } ?? ""
+        guard let date = publishedDate else { return "Unknown Date" }
+        return formatDate(time: date)
     }
     
     static func allRecent() -> NSFetchRequest<Episode> {

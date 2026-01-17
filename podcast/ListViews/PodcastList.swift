@@ -59,7 +59,7 @@ struct PodcastList: View {
     }
     
     private func swipeActions(for podcast: Podcast) -> some View {
-        HStack {  // Using HStack instead of Group provides better type inference
+        HStack {
             Button(action: {
                 Task { @MainActor in
                     Podcast.delete(podcast: podcast)
@@ -87,11 +87,12 @@ struct PodcastList: View {
 }
 
 
-//#Preview {
-//    let previewContainer = PersistenceController.preview.container
-//    
-//    PodcastList<MockPlayerViewModel>()
-//        .environment(\.managedObjectContext, PersistenceController.preview.container.viewContext)
-//        .environmentObject(MockPlayerViewModel(context: previewContainer.viewContext))
-//        .environmentObject(ThemeManager())
-//}
+#Preview {
+    @Previewable @State var showFullPlayer: Bool = false
+    let dm = DataManager.preview
+    
+    PodcastList(showFullPlayer: $showFullPlayer)
+        .environmentObject(dm)
+        .environmentObject(DownloadManager(dataManager: dm))
+        .environmentObject(ThemeManager())
+}

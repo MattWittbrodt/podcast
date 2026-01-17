@@ -57,6 +57,12 @@ func formattedTime(time: Double ) -> String {
     }
 }
 
+func formatDate(time: Date) -> String {
+    let formatter = DateFormatter()
+    formatter.dateFormat = "MMM d"
+    return formatter.string(from: time)
+}
+
 func shortTime(seconds: Int16) -> String {
     let hours = seconds / 3600
     let minutes = (seconds % 3600) / 60
@@ -69,19 +75,19 @@ func shortTime(seconds: Int16) -> String {
 }
 
 
-func htmlToPlainText(html: String) -> String? {
-    guard let data = html.data(using: .utf8) else { return nil }
-    
-    do {
-        let attributedString = try NSAttributedString(
-            data: data,
-            options: [.documentType: NSAttributedString.DocumentType.html],
-            documentAttributes: nil
-        )
-        return attributedString.string
-    } catch {
-        print("Error converting HTML: \(error)")
-        return nil
+func parseHtmlString(html: String) -> AttributedString {
+    if let nsAttributedString = try? NSAttributedString(
+        data: Data(html.utf8),
+        options: [
+            .documentType: NSAttributedString.DocumentType.html,
+            .characterEncoding: String.Encoding.utf8.rawValue
+        ],
+        documentAttributes: nil
+    ),
+    let attributedString = try? AttributedString(nsAttributedString, including: \.uiKit) {
+        attributedString
+    } else {
+        AttributedString(html)
     }
 }
 
