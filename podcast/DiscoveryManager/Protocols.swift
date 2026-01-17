@@ -12,6 +12,14 @@ protocol PresentationPodcast {
     var author: String { get }
     var description: String { get }
     func rssUrl() -> String
+    func imageLink() -> String
+}
+
+protocol PresentationEpisode {
+    var episodeTitle: String { get }
+    func description() -> String
+    func date() -> Date
+    func presentationDuration() -> String
 }
 
 struct IdentifiablePodcast: Identifiable {

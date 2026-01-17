@@ -11,24 +11,29 @@ struct PodcastListCard: View {
     
     var title: String
     var author: String
-    var image: String
+    var image: String?
     
     var body: some View {
         HStack {
-            AsyncImage(url: URL(string: image)) { phase in
-                if let image = phase.image {
-                    image
-                        .resizable()
-                        .frame(width: 100, height: 100, alignment: .topLeading)
-                        .cornerRadius(25)
-                } else if phase.error != nil {
-                    Text("Failed to load image.") // Indicates that the image failed to load.
-                        .foregroundColor(.red)
-                } else {
-                    ProgressView()
+            if let image = image,
+               let imageUrl = URL(string: image) {
+                AsyncImage(url: imageUrl) { phase in
+                    if let image = phase.image {
+                        image
+                            .resizable()
+                            .frame(width: 100, height: 100, alignment: .topLeading)
+                            .cornerRadius(25)
+                    } else if phase.error != nil {
+                        Text("Failed to load image.")
+                            .foregroundColor(.red)
+                    } else {
+                        ProgressView()
+                    }
                 }
+            } else {
+                Image(systemName: "microphone")
             }
-            VStack {
+            VStack(alignment: .leading) {
                 Text(title)
                     .font(.headline)
                 Text(author)
@@ -39,8 +44,11 @@ struct PodcastListCard: View {
     }
 }
 
-//#Preview {
-//    PodcastListCard(title: Podcast.example.title,
-//                    author: Podcast.example.author,
-//                    image: Podcast.example.image)
-//}
+#Preview {
+    let dm = DataManager.preview
+    let sample = dm.podcasts.first!
+    
+    PodcastListCard(title: sample.title,
+                    author: sample.author,
+                    image: sample.imageUrl)
+}

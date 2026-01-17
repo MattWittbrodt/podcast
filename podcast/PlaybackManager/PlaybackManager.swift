@@ -26,7 +26,7 @@ class PlaybackManager: ObservableObject {
     @Published var isPlaying: Bool = false
     @Published var episodeChapters: [Chapter]? = nil
     @Published var currentChapter: Chapter?
-    @Published var currentEpisodeImageData: Data? = nil
+    @Published var currentEpisodeImage: UIImage? = nil
     @Published var currentAudioDeviceName: String? = nil
     @Published var currentEpisodeDescription: AttributedString? = nil
     
@@ -51,10 +51,14 @@ class PlaybackManager: ObservableObject {
     
     func getCurrentImageData() {
         guard let currentEpisode = currentEpisode else { return }
-        if let chapter = currentChapter, let chapterImgData = chapter.imageData {
-            currentEpisodeImageData = chapterImgData
-        } else {
-            currentEpisodeImageData = currentEpisode.getImageData()
+                        
+        // Get the source data - using chapter if available
+        let data = (currentChapter?.imageData ?? currentEpisode.getImageData())
+        
+        // Convert to UIImage IMMEDIATELY on the Main Thread
+        if let data = data {
+            // This creates a stable object that survives app switching
+            self.currentEpisodeImage = UIImage(data: data)
         }
     }
     
@@ -134,7 +138,7 @@ class PlaybackManager: ObservableObject {
         currentTime = 0.0
         stopProgressUpdates()
         player = nil
-        currentEpisodeImageData = nil
+        currentEpisodeImage = nil
     }
 }
 
@@ -334,7 +338,7 @@ extension PlaybackManager {
         nowPlayingInfo[MPMediaItemPropertyArtist] = currentEpisode?.podcast?.title ?? "Podcast Name"
         
         // Set artwork if available
-        if let data = self.currentEpisodeImageData, let image = UIImage(data: data) {
+        if let image = self.currentEpisodeImage {
             nowPlayingInfo[MPMediaItemPropertyArtwork] = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
         }
         
@@ -355,7 +359,7 @@ extension PlaybackManager {
         nowPlayingInfo[MPMediaItemPropertyPlaybackDuration] = episode.duration
         nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackRate] = player?.rate
             
-        if let data = self.currentEpisodeImageData, let image = UIImage(data: data) {
+        if let image = self.currentEpisodeImage {
             nowPlayingInfo[MPMediaItemPropertyArtwork] = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
         }
         

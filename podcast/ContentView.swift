@@ -37,52 +37,45 @@ struct ContentView: View {
     var body: some View {
         ZStack(alignment: .bottom) {
             TabView {
-                RecentEpisodesList(updateEpisodes: updateEpisodes,
-                                   showFullPlayer: $showFullPlayer)
+                Tab("Home", systemImage: "house") {
+                    RecentEpisodesList(updateEpisodes: updateEpisodes,
+                                       showFullPlayer: $showFullPlayer)
                     .environmentObject(themeManager)
-                    .tabItem {
-                        Image(systemName: "house")
-                        Text("Home")
-                    }
                     .toolbar(.visible, for: .tabBar)
                     .toolbarBackground(.visible, for: .tabBar) //<- here
                     .toolbarBackground(Color(themeManager.selectedTheme.secondoryColor), for: .tabBar)
-                
-                PodcastList(showFullPlayer: $showFullPlayer)
-                    .tabItem {
-                        Image(systemName: "books.vertical")
-                        Text("Podcasts")
-                    }
-                    .toolbar(.visible, for: .tabBar)
-                    .toolbarBackground(.visible, for: .tabBar) //<- here
-                    .toolbarBackground(Color(themeManager.selectedTheme.secondoryColor), for: .tabBar)
-                
-                SearcherView()
-                    .environmentObject(themeManager)
-                    .environmentObject(discoveryManager)
-                    .tabItem {
-                        Image(systemName: "magnifyingglass")
-                        Text("Search")
-                    }
-                    .toolbar(.visible, for: .tabBar)
-                    .toolbarBackground(.visible, for: .tabBar) //<- here
-                    .toolbarBackground(Color(themeManager.selectedTheme.secondoryColor), for: .tabBar)
-     
-//                BookmarksView()
-//                    .tabItem {
-//                        Image(systemName: "bookmark")
-//                        Text("Bookmarks")
-//                    }
-//                    .environmentObject(themeManager)
-                
-                SettingsView()
-                    .tabItem {
-                        Image(systemName: "gear")
-                        Text("Settings")
-                    }
-                    .toolbar(.visible, for: .tabBar)
-                    .toolbarBackground(.visible, for: .tabBar) //<- here
-                    .toolbarBackground(Color(themeManager.selectedTheme.secondoryColor), for: .tabBar)
+                }
+                Tab("Podcasts", systemImage: "books.vertical") {
+                    PodcastList(showFullPlayer: $showFullPlayer)
+                        .toolbar(.visible, for: .tabBar)
+                        .toolbarBackground(.visible, for: .tabBar) //<- here
+                        .toolbarBackground(Color(themeManager.selectedTheme.secondoryColor), for: .tabBar)
+                }
+                Tab("Discover", systemImage: "magnifyingglass") {
+                    SearcherView()
+                        .environmentObject(themeManager)
+                        .environmentObject(discoveryManager)
+                        .toolbar(.visible, for: .tabBar)
+                        .toolbarBackground(.visible, for: .tabBar) //<- here
+                        .toolbarBackground(Color(themeManager.selectedTheme.secondoryColor), for: .tabBar)
+                }
+                Tab("Settings", systemImage: "gear") {
+                    SettingsView()
+                       .toolbar(.visible, for: .tabBar)
+                       .toolbarBackground(.visible, for: .tabBar) //<- here
+                       .toolbarBackground(Color(themeManager.selectedTheme.secondoryColor), for: .tabBar)
+                }
+//
+
+//     
+////                BookmarksView()
+////                    .tabItem {
+////                        Image(systemName: "bookmark")
+////                        Text("Bookmarks")
+////                    }
+////                    .environmentObject(themeManager)
+//                
+//
             }
             .environmentObject(dataManager)
             .environmentObject(playbackManager)
@@ -107,8 +100,10 @@ struct ContentView: View {
                 .presentationDragIndicator(.visible)
         }
         .onChange(of: scenePhase) { oldValue, newValue in
+            print("\(oldValue) - \(newValue)")
             if newValue == .active {
                 Task {
+                    print("here")
                     await updateEpisodes()
                 }
             }

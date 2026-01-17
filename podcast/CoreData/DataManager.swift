@@ -79,6 +79,12 @@ class DataManager: NSObject, ObservableObject {
             if index == 0 {
                 unlistenedEpisodes.append(episode)
                 sortEpisodesByTime()
+                Task {
+                    let dm = DownloadManager(dataManager: self)
+                    dm.startDownload(for: episode)
+                    sortEpisodesByTime()
+                }
+                
             } else {
                 episode.listened = true
             }
@@ -235,7 +241,7 @@ extension DataManager {
                               let decodedChapters = try await PodcastFeedService.fetchNewChapters(for: chaptersUrl) else { continue }
                         try await self.updateChapters(for: ep.objectID, with: decodedChapters.chapters)
                     } catch {
-                        print("Failed to get chapters for: \(ep.title ?? "podcast title missing")")
+                        print("Failed to get chapters for: \(ep.title ?? "podcast title missing") - \(ep.chaptersUrl ?? "")")
                     }
                 }
             }
