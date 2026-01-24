@@ -17,8 +17,9 @@ class DownloadManager: NSObject, ObservableObject, URLSessionDownloadDelegate {
     static let backgroundIdentifier = "com.planecast.Planecast"
     
     // The central hub for all state changes. It broadcasts a tuple: (Episode, new DownloadState)
-    private let downloadStateSubject = PassthroughSubject<(NSManagedObjectID, DownloadState), Never>()
-    private var currentStates: [NSManagedObjectID: DownloadState] = [:]
+    //private let downloadStateSubject = PassthroughSubject<(NSManagedObjectID, DownloadState), Never>()
+    private var currentStates: [NSManagedObjectID: CurrentValueSubject<DownloadState, Never>] = [:]
+    //private var currentStates: [NSManagedObjectID: DownloadState] = [:]
     
     // The Set acts as the real-time log of episode IDs currently being downloaded.
     @Published var activeDownloads: Set<NSManagedObjectID> = []
@@ -90,25 +91,19 @@ extension DownloadManager {
         
         task.resume()
     }
-    
-    // function to track progress of specific episodes
-    func downloadStatePublisher(for episodeId: NSManagedObjectID, initialDownloadState: Bool) -> AnyPublisher<DownloadState, Never> {
-        //print("\(episodeId): Creating download state publisher...")
-        // Start with the current state (if known), then listen to future changes
-        let initialPublisher = Just(initialDownloadState ? DownloadState.downloaded : DownloadState.notDownloaded)
-            .setFailureType(to: Never.self)
-            .eraseToAnyPublisher()
+     
+    func downloadStatePublisher(for episodeId: NSManagedObjectID, fileAlreadyExists: Bool) -> AnyPublisher<DownloadState, Never> {
         
-        let futureChangesPublisher = downloadStateSubject
-            // Only emit values for the episode we care about
-            .filter { $0.0 == episodeId }
-            // Map the tuple to just the DownloadState
-            .map { $0.1 }
+        // 1. Get existing subject or create a new one with the initial value
+        let currentState = currentStates[episodeId] ?? {
+            let initialState = fileAlreadyExists ? DownloadState.downloaded : DownloadState.notDownloaded
+            let newSubject = CurrentValueSubject<DownloadState, Never>(initialState)
+            currentStates[episodeId] = newSubject
+            return newSubject
+        }()
         
-        // Combine the initial state and all future changes into one publisher
-        return initialPublisher
-            .merge(with: futureChangesPublisher)
-            .eraseToAnyPublisher()
+        // 2. Just return it! New subscribers automatically get the current value first.
+        return currentState.eraseToAnyPublisher()
     }
     
     func downloadFileExists(for episode: Episode) -> Bool {
@@ -131,9 +126,30 @@ extension DownloadManager {
         do {
             if downloadFileExists(for: episode) {
                 try FileManager.default.removeItem(at: episodePath)
+                update(episodeId: episode.objectID, newState: .notDownloaded)
             }
         } catch {
             print("❌ Download not removed")
+        }
+    }
+    
+    // Deletes specified MP3 files
+    func deleteMp3Files() async throws {
+        let files = findAllMP3sInDownloads()
+        let fileManager = FileManager.default
+        
+        await withThrowingTaskGroup { group in
+            for file in files {
+                group.addTask {
+                    try fileManager.removeItem(at: file)
+                }
+            }
+        }
+        // Afterwards, set all of current downloads to "not downloaded"
+        for episode in currentStates.keys {
+            Task { @MainActor in
+                update(episodeId: episode, newState: .notDownloaded)
+            }
         }
     }
 }
@@ -221,7 +237,6 @@ extension DownloadManager {
     // Called when task is finished with an error. Removes failed download from active download
     func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
         if let error = error {
-            print("Download failed: \(error.localizedDescription)")
             if let episodeId = taskMap[task.taskIdentifier] {
                 // Clean up: remove episode ID from the active log
                 DispatchQueue.main.async {
@@ -244,11 +259,16 @@ extension DownloadManager {
 extension DownloadManager {
     
     private func update(episodeId: NSManagedObjectID, newState: DownloadState) {
-        // Only proceed if the state has genuinely changed
-        guard currentStates[episodeId] != newState else { return }
-
-        currentStates[episodeId] = newState
-        downloadStateSubject.send((episodeId, newState))
+        if let existingSubject = currentStates[episodeId] {
+            // 1. Check for genuine change (CurrentValueSubject allows easy comparison)
+            guard existingSubject.value != newState else { return }
+            
+            // 2. Updating .value automatically broadcasts to all subscribers
+            existingSubject.value = newState
+        } else {
+            // 3. If no one is listening yet, create the subject with the new state
+            currentStates[episodeId] = CurrentValueSubject<DownloadState, Never>(newState)
+        }
     }
     
     func generateStoreFilePath(for episode: Episode) -> URL? {
@@ -266,6 +286,23 @@ extension DownloadManager {
         
         // Join with an underscore or dash
         return components.joined(separator: "_")
+    }
+    
+    // Finds all .mp3 files in Downloads directory
+    func findAllMP3sInDownloads() -> [URL] {
+        let fileManager = FileManager.default
+        
+        do {
+            let directoryContents = try fileManager.contentsOfDirectory(
+                at: downloadsDirectory,
+                includingPropertiesForKeys: nil,
+                options: []
+            )
+            return directoryContents.filter { $0.pathExtension == "mp3" }
+        } catch {
+            print("Error finding MP3s: \(error)")
+            return []
+        }
     }
 }
 

@@ -174,6 +174,20 @@ extension DataManager {
         fetchRequest.predicate = NSPredicate(format: "podcast == %@", podcast.objectID)
         return try persistence.viewContext.fetch(fetchRequest)
     }
+    
+    // If no settings found, create one
+    func getSettings() -> UserSettings {
+        let request: NSFetchRequest<UserSettings> = UserSettings.fetchRequest()
+        request.sortDescriptors = [NSSortDescriptor(keyPath: \UserSettings.updateTime, ascending: false)]
+        request.fetchLimit = 1
+        guard let settings = try? persistence.viewContext.fetch(request).first else {
+            let settings = UserSettings.create(context: persistence.viewContext)
+            try? persistence.viewContext.save()
+            return settings
+        }
+        print("getting settings: \(settings)")
+        return settings
+    }
 }
 
 // MARK: Data saving/updating functions

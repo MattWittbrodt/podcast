@@ -19,6 +19,7 @@ struct ContentViewFactory {
         let downloadManager = DownloadManager(dataManager: dataManager)
         let podcastFeedService = PodcastFeedService(dataManager: dataManager)
         let playbackManager = PlaybackManager(downloadManager: downloadManager, dataManager: dataManager)
+        let settingsManager = SettingsManager(downloadManager: downloadManager, dataManager: dataManager)
         
         // 3. Return the fully initialized ContentView
         return ContentView(
@@ -26,7 +27,8 @@ struct ContentViewFactory {
             downloadManager: downloadManager,
             dataManager: dataManager,
             feedService: podcastFeedService,
-            playbackManager: playbackManager
+            playbackManager: playbackManager,
+            settingsManager: settingsManager
         )
     }
 }

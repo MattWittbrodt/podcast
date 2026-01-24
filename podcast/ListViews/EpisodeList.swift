@@ -87,13 +87,6 @@ struct EpisodeList<ViewModel: PlayerViewModelProtocol>: View {
     @State private var selectedEpisode: Episode?
     var episodeList: [Episode]
     
-//    init(podcast: Podcast) {
-//        self.podcast = podcast
-//        self.episodeList = podcast.episodes?.sortedArray(using: [
-//            NSSortDescriptor(key: "publishedDate", ascending: false)
-//        ]) as? [Episode] ?? []
-//    }
-    
     var body: some View {
         Color(themeManager.selectedTheme.secondoryColor)
             .ignoresSafeArea(.all)

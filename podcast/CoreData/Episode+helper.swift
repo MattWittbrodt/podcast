@@ -174,10 +174,6 @@ extension Episode {
         let episodeTitle = self.title?.replacingOccurrences(of: "/", with: "-") ?? "episode"
         return "\(episodeTitle)-\(self.guid ?? "Default Guid")"
     }
-    
-//    func isDownloaded() -> Bool {
-//        return self.download != nil
-//    }
 }
 
 #if DEBUG
