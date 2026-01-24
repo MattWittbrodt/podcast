@@ -51,10 +51,11 @@
         <attribute name="title_" optional="YES" attributeType="String" defaultValueString="Default Title"/>
         <relationship name="episodes" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="Episode" inverseName="podcast" inverseEntity="Episode"/>
     </entity>
-    <entity name="Settings" representedClassName="Settings" syncable="YES" codeGenerationType="class">
-        <attribute name="downloadCount" optional="YES" attributeType="Integer 16" defaultValueString="3" usesScalarValueType="YES"/>
-    </entity>
     <entity name="UpdateTime" representedClassName="UpdateTime" syncable="YES" codeGenerationType="class">
         <attribute name="updateTime" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+    </entity>
+    <entity name="UserSettings" representedClassName="UserSettings" syncable="YES" codeGenerationType="class">
+        <attribute name="downloadCount" optional="YES" attributeType="Integer 16" defaultValueString="3" usesScalarValueType="YES"/>
+        <attribute name="updateTime" attributeType="Date" usesScalarValueType="NO"/>
     </entity>
 </model>

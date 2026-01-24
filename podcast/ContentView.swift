@@ -20,6 +20,7 @@ struct ContentView: View {
     @StateObject var dataManager: DataManager
     @StateObject var feedService: PodcastFeedService
     @StateObject var playbackManager: PlaybackManager
+    @StateObject var settingsManager: SettingsManager
     
     func updateEpisodes() async {
         let newEpisodes = await feedService.updateAllSubscribedPodcasts()
@@ -29,8 +30,27 @@ struct ContentView: View {
         
         // Continue handling episodes
         dataManager.handleNewEpisodes(episodes: newEpisodes)
-        for episode in newEpisodes {
+        
+        // Checking for unlistened episodes that are not downloaded
+        let groupedByPodcast = Dictionary(grouping: dataManager.unlistenedEpisodes, by: { $0.podcast?.title ?? "Unknown Podcast" })
+
+        // Map over each group to sort and take the top 3
+        let possibleDownloads = groupedByPodcast.mapValues { episodes in
+            episodes
+                .sorted { $0.publishedDate ?? .distantPast > $1.publishedDate ?? .distantPast}
+                .prefix(Int(settingsManager.numDownloads))
+        }.values.flatMap { $0 }
+        
+        // Passing through start download. For possibleDownloads, startDownload will simply return if already downloaded
+        for episode in newEpisodes + possibleDownloads {
             downloadManager.startDownload(for: episode)
+        }
+        
+        // For unlistened episodes not in the download list, remove download to save space on device
+        for episode in dataManager.unlistenedEpisodes {
+            if !possibleDownloads.contains(episode) {
+                downloadManager.removeDownload(for: episode)
+            }
         }
     }
     
@@ -81,6 +101,7 @@ struct ContentView: View {
             .environmentObject(playbackManager)
             .environmentObject(downloadManager)
             .environmentObject(themeManager)
+            .environmentObject(settingsManager)
             .accentColor(Color(themeManager.selectedTheme.primaryColor))
             
             if playbackManager.currentEpisode != nil {
@@ -100,10 +121,8 @@ struct ContentView: View {
                 .presentationDragIndicator(.visible)
         }
         .onChange(of: scenePhase) { oldValue, newValue in
-            print("\(oldValue) - \(newValue)")
             if newValue == .active {
                 Task {
-                    print("here")
                     await updateEpisodes()
                 }
             }

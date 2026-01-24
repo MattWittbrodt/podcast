@@ -45,7 +45,6 @@ struct EpisodeListCard: View {
                     .opacity(0.7)
                 HStack{
                     Text("\(episode.formattedDate)")
-                        .padding(.leading,3)
                     Spacer()
                     Text("\(shortTime(seconds: episode.episodeDuration-Int16(episode.lastListened)))")
                         .padding(.leading,3)
@@ -56,8 +55,7 @@ struct EpisodeListCard: View {
         .padding()
         .onReceive(
             downloadManager.downloadStatePublisher(for: episode.objectID,
-                                                   initialDownloadState: downloadManager.downloadFileExists(for: episode))) { state in
-            // Update the local @State, triggering a view refresh
+                                                   fileAlreadyExists: downloadManager.downloadFileExists(for: episode))) { state in
             downloadState = state
         }
     }
