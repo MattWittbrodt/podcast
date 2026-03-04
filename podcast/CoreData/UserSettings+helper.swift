@@ -10,8 +10,8 @@ import CoreData
 
 extension UserSettings {
     static func create(context: NSManagedObjectContext) -> UserSettings {
+        // Defaults have been specified
         let entity = UserSettings(context: context)
-        entity.downloadCount = 3
         entity.updateTime = Date()
         return entity
     }

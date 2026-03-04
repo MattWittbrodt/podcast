@@ -158,7 +158,7 @@ extension PodcastFeedService {
             
             return processedEpisodes
         } catch {
-            print("❌ Failed to fetch episodes for \(podcast.title): \(error)")
+            print("❌ Failed to fetch episodes for \(podcast.title): \(error)\n\(podcast.feedUrl)")
             return []
         }
     }

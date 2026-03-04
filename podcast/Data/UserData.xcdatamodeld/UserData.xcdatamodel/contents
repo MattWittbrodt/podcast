@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="24512" systemVersion="25C56" minimumToolsVersion="Automatic" sourceLanguage="Swift" usedWithSwiftData="YES" userDefinedModelVersionIdentifier="">
+<model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="24512" systemVersion="25D125" minimumToolsVersion="Automatic" sourceLanguage="Swift" usedWithSwiftData="YES" userDefinedModelVersionIdentifier="">
     <entity name="Bookmark" representedClassName="Bookmark" syncable="YES" codeGenerationType="class">
         <attribute name="dateTime" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
         <attribute name="startTime" optional="YES" attributeType="Integer 64" defaultValueString="0" usesScalarValueType="YES"/>
@@ -26,6 +26,7 @@
         <attribute name="imageUrl" optional="YES" attributeType="String"/>
         <attribute name="lastListened" optional="YES" attributeType="Double" defaultValueString="0" usesScalarValueType="YES"/>
         <attribute name="listened" optional="YES" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
+        <attribute name="manualDownload" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
         <attribute name="publishedDate" attributeType="Date" usesScalarValueType="NO"/>
         <attribute name="title" optional="YES" attributeType="String"/>
         <attribute name="uuid" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
@@ -55,7 +56,10 @@
         <attribute name="updateTime" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
     </entity>
     <entity name="UserSettings" representedClassName="UserSettings" syncable="YES" codeGenerationType="class">
-        <attribute name="downloadCount" optional="YES" attributeType="Integer 16" defaultValueString="3" usesScalarValueType="YES"/>
+        <attribute name="allowCellularDownloads" attributeType="Boolean" defaultValueString="YES" usesScalarValueType="YES"/>
+        <attribute name="backwardSkip" attributeType="Integer 16" defaultValueString="30" usesScalarValueType="YES"/>
+        <attribute name="downloadCount" attributeType="Integer 16" defaultValueString="3" usesScalarValueType="YES"/>
+        <attribute name="forwardSkip" attributeType="Integer 16" defaultValueString="30" usesScalarValueType="YES"/>
         <attribute name="updateTime" attributeType="Date" usesScalarValueType="NO"/>
     </entity>
 </model>

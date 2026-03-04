@@ -102,7 +102,6 @@ extension PlaybackManager {
               let type = AVAudioSession.InterruptionType(rawValue: typeValue) else {
             return
         }
-        print("Got notification: \(type) - \(userInfo)")
         
         switch type {
             

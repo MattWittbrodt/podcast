@@ -9,6 +9,7 @@ import SwiftUI
 
 struct MiniPlayerView: View {
     @EnvironmentObject var playbackManager: PlaybackManager
+    @EnvironmentObject var settingsManager: SettingsManager
     @Binding var showFullPlayer: Bool
     
     var body: some View {
@@ -49,10 +50,10 @@ struct MiniPlayerView: View {
                     }
                     
                     Button(action: {
-                        playbackManager.skipForward(seconds: 30)
+                        playbackManager.skipForward(seconds: Int64(settingsManager.settings.forwardSkip))
                     })
                     {
-                        Image(systemName: "30.arrow.trianglehead.clockwise")
+                        Image(systemName: "\(settingsManager.settings.forwardSkip).arrow.trianglehead.clockwise")
                             .imageScale(.large)
                             .fontWeight(.semibold)
                     }

@@ -14,8 +14,19 @@ struct PodcastView: View {
     @EnvironmentObject private var downloadManager: DownloadManager
     @EnvironmentObject private var playbackManager: PlaybackManager
     @Binding var showFullPlayer: Bool
-
+    
     var body: some View {
+        Menu("Options") {
+            Button("Mark All As Listened", systemImage: "tray.fill") {
+                dataManager.markAllAsListened(podcast)
+            }
+            Button("Share", systemImage: "square.and.arrow.up") {
+                // Handle share
+            }
+            Button("Delete", systemImage: "trash", role: .destructive) {
+                // Handle delete
+            }
+        }
         List {
             ForEach(episodes, id: \.id) { episode in
                 EpisodeListCard(episode: episode)
@@ -66,6 +77,21 @@ struct PodcastView: View {
     }
 }
 
-//#Preview {
-//    PodcastView()
-//}
+#Preview {
+    @Previewable @State var showFullPlayer: Bool = false
+    let dm = DataManager.preview
+    let _ = print("here: \(dm.podcasts.count)")
+    let dlManager = DownloadManager()
+    
+    let sm = SettingsManager(dataManager: dm)
+    let pbM = PlaybackManager(downloadManager: dlManager, dataManager: dm, settingsManager: sm)
+    
+    let samplePodcast = Podcast.createSample(context: dm.persistence.viewContext)
+    
+    PodcastView(podcast: samplePodcast, showFullPlayer: $showFullPlayer)
+        .environmentObject(dm)
+        .environmentObject(pbM)
+        .environmentObject(dlManager)
+        .environmentObject(ThemeManager())
+
+}

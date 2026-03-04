@@ -13,6 +13,7 @@ import MediaPlayer
 class PlaybackManager: ObservableObject {
     private let downloadManager: DownloadManager
     private let dataManager: DataManager
+    private var settingsManager: SettingsManager
     private let saveFrequency: TimeInterval = 5
     
     // MARK: - Published Properties
@@ -35,9 +36,10 @@ class PlaybackManager: ObservableObject {
     private var timeObserver: Any?
     private var playlistEpisodes: [Episode] = []
     
-    init(downloadManager: DownloadManager, dataManager: DataManager) {
+    init(downloadManager: DownloadManager, dataManager: DataManager, settingsManager: SettingsManager) {
         self.downloadManager = downloadManager
         self.dataManager = dataManager
+        self.settingsManager = settingsManager
         setupAudioSession()
         setupCombineSubscribers()
     }
@@ -184,7 +186,6 @@ extension PlaybackManager {
         player.seek(to: newTime, toleranceBefore: .zero, toleranceAfter: .zero) { [weak self] _ in
             // When seeking is complete, ensure currentTime is updated (optional, as observer should take over)
             self?.currentTime = CMTimeGetSeconds(player.currentTime())
-            self?.isSeeking = false
             // You might need logic here to ensure playback resumes if it was paused before seeking
         }
     }
@@ -233,6 +234,9 @@ extension PlaybackManager {
         let interval = CMTime(seconds: 0.5, preferredTimescale: CMTimeScale(NSEC_PER_SEC))
         timeObserver = player.addPeriodicTimeObserver(forInterval: interval, queue: .main) { [weak self] time in
             Task { @MainActor in
+                // If the user is editing the slider, do not run any updates
+                guard self?.isSeeking == false else { return }
+                
                 // Save current time and update now playing
                 self?.currentTime = time.seconds
                 self?.updateNowPlayingInfo()
@@ -309,18 +313,17 @@ extension PlaybackManager {
             return .success
         }
         
-        
-        commandCenter.skipBackwardCommand.preferredIntervals = [30]
+        commandCenter.skipBackwardCommand.preferredIntervals = [NSNumber(value: settingsManager.backwardSkip)]
         commandCenter.skipBackwardCommand.isEnabled = true
         commandCenter.skipBackwardCommand.addTarget { [weak self] _ in
-            self?.skipBackward(seconds: 30)
+            self?.skipBackward(seconds: Int64(self?.settingsManager.backwardSkip ?? 30))
             return .success
         }
         
-        commandCenter.skipForwardCommand.preferredIntervals = [30]
+        commandCenter.skipForwardCommand.preferredIntervals = [NSNumber(value: settingsManager.forwardSkip)]
         commandCenter.skipForwardCommand.isEnabled = true
         commandCenter.skipForwardCommand.addTarget { [weak self] _ in
-            self?.skipForward(seconds: 30)
+            self?.skipForward(seconds: Int64(self?.settingsManager.forwardSkip ?? 30))
             return .success
         }
         

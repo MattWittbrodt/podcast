@@ -10,11 +10,10 @@ import Foundation
 @MainActor
 class SettingsManager: ObservableObject {
     private var dataManager: DataManager
-    private var downloadManager: DownloadManager
+    @Published var skipOptions: [Int16] = [5,10,15,30,45,60,75,90]
     @Published var settings: UserSettings
     
-    init(downloadManager: DownloadManager, dataManager: DataManager) {
-        self.downloadManager = downloadManager
+    init(dataManager: DataManager) {
         self.dataManager = dataManager
         let settings = dataManager.getSettings()
         self.settings = settings
@@ -29,15 +28,36 @@ class SettingsManager: ObservableObject {
             try? dataManager.persistence.viewContext.save()
         }
     }
+    
+    var forwardSkip: Int16 {
+        get { settings.forwardSkip }
+        set {
+            objectWillChange.send()
+            settings.forwardSkip = newValue
+            try! dataManager.persistence.viewContext.save()
+        }
+    }
+    
+    var backwardSkip: Int16 {
+        get { settings.backwardSkip }
+        set {
+            objectWillChange.send()
+            settings.backwardSkip = newValue
+            try! dataManager.persistence.viewContext.save()
+        }
+    }
+    
+    var allowCellularDownloads: Bool {
+        get { settings.allowCellularDownloads }
+        set {
+            objectWillChange.send()
+            settings.allowCellularDownloads = newValue
+            try! dataManager.persistence.viewContext.save()
+        }
+    }
 }
 
 // MARK: Public API
 extension SettingsManager {
-    
-    func deleteDownloads() async throws {
-        try await downloadManager.deleteMp3Files()
-        await MainActor.run {
-            dataManager.refreshEpisodes()
-        }
-    }
+
 }

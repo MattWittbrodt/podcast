@@ -52,17 +52,24 @@ struct PlayerMenu: View {
 struct PlayerControlsView: View {
     @EnvironmentObject var playbackManager: PlaybackManager
     @EnvironmentObject var themeManager: ThemeManager
+    @EnvironmentObject var settingsManager: SettingsManager
     @State private var isEditing = false
     
     var body: some View {
         VStack {
             Slider(
-                value: $playbackManager.currentTime, // Binds to the current time
+                value: $playbackManager.currentTime,
                 in: 0...playbackManager.duration,
                 onEditingChanged: { isEditing in
                     playbackManager.isSeeking = isEditing
                     if !isEditing {
                         playbackManager.seek(to: playbackManager.currentTime)
+                        
+                        // Optional: small delay before allowing timer updates again
+                        // to prevent the slider from "flicking" back to the old time
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                            playbackManager.isSeeking = false
+                        }
                     }
                 }
             )
@@ -78,8 +85,8 @@ struct PlayerControlsView: View {
             .padding(.bottom, 20)
             
             HStack {
-                Button(action: { playbackManager.skipBackward(seconds: 30) }) {
-                    Image(systemName: "gobackward.30")
+                Button(action: { playbackManager.skipBackward(seconds: Int64(settingsManager.settings.backwardSkip)) }) {
+                    Image(systemName: "gobackward.\(settingsManager.settings.backwardSkip)")
                         .resizable()
                         .frame(width: 40, height: 45 )
                 }
@@ -90,8 +97,8 @@ struct PlayerControlsView: View {
                         .frame(width: 35, height: 45 )
                 }
                 Spacer()
-                Button(action: { playbackManager.skipForward(seconds: 30) }) {
-                    Image(systemName: "goforward.30")
+                Button(action: { playbackManager.skipForward(seconds: Int64(settingsManager.settings.forwardSkip)) }) {
+                    Image(systemName: "goforward.\(settingsManager.settings.forwardSkip)")
                         .resizable()
                         .frame(width: 40, height: 45 )
                 }
@@ -153,6 +160,7 @@ struct AirPlayButton: UIViewRepresentable {
 struct Player: View {
     @EnvironmentObject var themeManager: ThemeManager
     @EnvironmentObject var playbackManager: PlaybackManager
+    @EnvironmentObject var settingsManager: SettingsManager
     
     @State var showEpisodeNotes: Bool = false
         
@@ -217,17 +225,22 @@ struct PlayerNotesAndImage: View {
             EpisodeImageView(showDescriptions: $showDescription)
             if showDescription {
                 PlayerEpisodeDescriptionView(
-                    html: playbackManager.currentEpisodeDescription ?? "Bad")
+                    html: playbackManager.currentEpisodeDescription ?? "Bad"
+                )
             }
         }
     }
 }
 
 #Preview {
-    
     let dataManager = DataManager.preview
-    let downloadManager = DownloadManager(dataManager: dataManager)
-    let pm = PlaybackManager(downloadManager: downloadManager, dataManager: dataManager)
+    let settings = SettingsManager(dataManager: dataManager)
+    let downloadManager = DownloadManager()
+    
+    let pm = PlaybackManager(
+        downloadManager: downloadManager,
+        dataManager: dataManager,
+        settingsManager: settings)
     
     // Create sample in the same context that PlaybackManager uses
     let episode = Episode.sample(in: dataManager.persistence.viewContext)
@@ -251,4 +264,5 @@ struct PlayerNotesAndImage: View {
     return Player()
         .environmentObject(pm)
         .environmentObject(ThemeManager())
+        .environmentObject(settings)
 }

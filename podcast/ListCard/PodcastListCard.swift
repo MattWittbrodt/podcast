@@ -21,8 +21,8 @@ struct PodcastListCard: View {
                     if let image = phase.image {
                         image
                             .resizable()
-                            .frame(width: 100, height: 100, alignment: .topLeading)
-                            .cornerRadius(25)
+                            .frame(width: 75, height: 75, alignment: .topLeading)
+                            .cornerRadius(20)
                     } else if phase.error != nil {
                         Text("Failed to load image.")
                             .foregroundColor(.red)

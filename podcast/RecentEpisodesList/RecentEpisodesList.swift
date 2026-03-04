@@ -16,6 +16,10 @@ struct RecentEpisodesList: View {
     
     @Binding var showFullPlayer: Bool
     
+    @State private var showAlert = false
+    @State private var activeAlert: AlertType?
+    @State private var inFocusEpisode: Episode?
+    
     let updateEpisodes: () async -> Void
     
     init(updateEpisodes: @escaping () async -> Void, showFullPlayer: Binding<Bool>) {
@@ -25,21 +29,37 @@ struct RecentEpisodesList: View {
     
     var body: some View {
         NavigationStack {
-            content
+            GeometryReader { geometry in
+                VStack(alignment: .leading, spacing: 16) {
+                    header
+                    episodeList(in: geometry)
+                }
+                    .padding(.horizontal)
+                }
                 .background(Color(themeManager.selectedTheme.secondoryColor))
                 .refreshable {
                     await updateEpisodes()
                 }
         }
-    }
-    
-    private var content: some View {
-        GeometryReader { geometry in
-            VStack(alignment: .leading, spacing: 16) {
-                header
-                episodeList(in: geometry)
+        .alert(
+            activeAlert?.id ?? "Alert",
+            isPresented: Binding(
+                get: { activeAlert != nil },
+                set: { if !$0 { activeAlert = nil } }
+            )
+        ) {
+            if case .cellularDownload = activeAlert {
+                if let episode = inFocusEpisode {
+                    Button("Download Anyway") {
+                        Task {
+                            manualDownload(for: episode, manualOverride: true)
+                        }
+                    }
+                }
+                Button("Cancel", role: .cancel) {}
             }
-            .padding(.horizontal)
+        } message: {
+            Text("Selection an option")
         }
     }
     
@@ -80,6 +100,7 @@ struct RecentEpisodesList: View {
     }
 
     private func swipeActions(for episode: Episode) -> some View {
+        
         HStack {
             Button(action: {
                 // If we want to mark as listened, need to:
@@ -96,13 +117,28 @@ struct RecentEpisodesList: View {
             .tint(.orange)
             
             Button(action: {
-                Task {
-                    downloadManager.startDownload(for: episode)
-                }}) {
+                inFocusEpisode = episode
+                activeAlert = .cellularDownload
+                
+//                if downloadManager.stopCellularDownload() {
+//                    inFocusEpisode = episode
+//                    activeAlert = .cellularDownload
+//                } else {
+//                    Task {
+//                        manualDownload(for: episode)
+//                    }
+//                }
+            })
+            {
                 Label("Download", systemImage: "square.and.arrow.down.fill")
             }
             .tint(.green)
         }
+    }
+    
+    private func manualDownload(for episode: Episode, manualOverride: Bool = false) {
+        downloadManager.startDownload(for: episode, manualOverride: manualOverride)
+        dataManager.markEpisodeAsManuallyDownloaded(episode)
     }
     
     private func handleEpisodeSelection(_ episode: Episode) {

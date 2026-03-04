@@ -48,7 +48,7 @@ struct ContentView: View {
         
         // For unlistened episodes not in the download list, remove download to save space on device
         for episode in dataManager.unlistenedEpisodes {
-            if !possibleDownloads.contains(episode) {
+            if !possibleDownloads.contains(episode) && episode.manualDownload == false {
                 downloadManager.removeDownload(for: episode)
             }
         }
@@ -63,27 +63,23 @@ struct ContentView: View {
                     .environmentObject(themeManager)
                     .toolbar(.visible, for: .tabBar)
                     .toolbarBackground(.visible, for: .tabBar) //<- here
-                    .toolbarBackground(Color(themeManager.selectedTheme.secondoryColor), for: .tabBar)
                 }
                 Tab("Podcasts", systemImage: "books.vertical") {
                     PodcastList(showFullPlayer: $showFullPlayer)
                         .toolbar(.visible, for: .tabBar)
                         .toolbarBackground(.visible, for: .tabBar) //<- here
-                        .toolbarBackground(Color(themeManager.selectedTheme.secondoryColor), for: .tabBar)
                 }
                 Tab("Discover", systemImage: "magnifyingglass") {
                     SearcherView()
                         .environmentObject(themeManager)
                         .environmentObject(discoveryManager)
                         .toolbar(.visible, for: .tabBar)
-                        .toolbarBackground(.visible, for: .tabBar) //<- here
-                        .toolbarBackground(Color(themeManager.selectedTheme.secondoryColor), for: .tabBar)
+                        .toolbarBackground(.visible, for: .tabBar)
                 }
                 Tab("Settings", systemImage: "gear") {
                     SettingsView()
                        .toolbar(.visible, for: .tabBar)
                        .toolbarBackground(.visible, for: .tabBar) //<- here
-                       .toolbarBackground(Color(themeManager.selectedTheme.secondoryColor), for: .tabBar)
                 }
 //
 
@@ -107,6 +103,7 @@ struct ContentView: View {
             if playbackManager.currentEpisode != nil {
                 MiniPlayerView(showFullPlayer: $showFullPlayer)
                     .environmentObject(playbackManager)
+                    .environmentObject(settingsManager)
                     .transition(.move(edge: .bottom))
                     .zIndex(1)
                     .padding(.bottom, UIApplication.shared.windows.first?.safeAreaInsets.bottom == 0 ? 20 : 0)
@@ -118,6 +115,7 @@ struct ContentView: View {
             Player()
                 .environmentObject(playbackManager)
                 .environmentObject(themeManager)
+                .environmentObject(settingsManager)
                 .presentationDragIndicator(.visible)
         }
         .onChange(of: scenePhase) { oldValue, newValue in

@@ -7,6 +7,7 @@
 
 import Foundation
 import CoreData
+import AVKit
 
 enum DataManagerError: Error {
     case episodeNotFound
@@ -15,6 +16,7 @@ enum DataManagerError: Error {
 
 @MainActor
 class DataManager: NSObject, ObservableObject {
+    let downloadManager: DownloadManager
     let debugid = UUID()
     let persistence: PersistenceManager
     
@@ -28,10 +30,15 @@ class DataManager: NSObject, ObservableObject {
     // For chapter updates. pushing to main thread
     typealias ChapterUpdateCompletion = @MainActor (Result<[Chapter]?, Error>) -> Void
     
-    init(persistence: PersistenceManager) {
+    init(persistence: PersistenceManager, downloadManager: DownloadManager) {
         self.persistence = persistence
+        self.downloadManager = downloadManager
         super.init()
         loadInitialData()
+        // This is the "Glue" code
+        self.downloadManager.onDownloadFinished = { [weak self] guid, fileUrl in
+            self?.handleFinishedDownload(guid: guid, fileUrl: fileUrl)
+        }
     }
     
     func loadInitialData() {
@@ -45,6 +52,41 @@ class DataManager: NSObject, ObservableObject {
             
         } catch {
             print("Error fetching podcasts")
+        }
+    }
+    
+    // Function does post-download cleanup. Currently handles updating episode duration as that often
+    // conflicts with RSS
+    private func handleFinishedDownload(guid: String, fileUrl: URL) {
+        Task {
+            do {
+                let asset = AVURLAsset(url: fileUrl)
+                let durationCMTime = try await asset.load(.duration)
+                let durationSeconds = CMTimeGetSeconds(durationCMTime)
+                let finalDuration = durationSeconds.isFinite ? Int16(durationSeconds) : nil
+                
+                guard let updateDuration = finalDuration else {return}
+                
+                let context = persistence.container.newBackgroundContext()
+                
+                try await context.perform {
+                    let request: NSFetchRequest<Episode> = Episode.fetchRequest()
+                    request.predicate = NSPredicate(format: "guid == %@", guid)
+                    
+                    if let episode = try context.fetch(request).first {
+                        episode.duration = updateDuration
+                        try context.save()
+                        print("Successfully saved duration for GUID: \(guid)")
+                    }
+                }
+                
+                // 3. Update the UI on the Main Actor
+                await MainActor.run {
+                    self.saveMainContext()
+                }
+            } catch {
+                print("Error finalising download for \(guid): \(error.localizedDescription)")
+            }
         }
     }
     
@@ -80,11 +122,9 @@ class DataManager: NSObject, ObservableObject {
                 unlistenedEpisodes.append(episode)
                 sortEpisodesByTime()
                 Task {
-                    let dm = DownloadManager(dataManager: self)
-                    dm.startDownload(for: episode)
+                    downloadManager.startDownload(for: episode)
                     sortEpisodesByTime()
                 }
-                
             } else {
                 episode.listened = true
             }
@@ -95,7 +135,7 @@ class DataManager: NSObject, ObservableObject {
     }
     
     func addNewEpisodes(_ rssEpisodes: [RSSEpisode], to podcast: Podcast) async -> [Episode] {
-        print("📥 Adding \(rssEpisodes.count) episodes to \(podcast.title ?? "No title")")
+        print("📥 Adding \(rssEpisodes.count) episodes to \(podcast.title)")
         
         let context = persistence.viewContext
         
@@ -200,11 +240,44 @@ extension DataManager {
         return newEpisode
     }
     
+    func markAllAsListened(_ podcast: Podcast) {
+
+        // 1. Create the Batch Request
+        let batchRequest = NSBatchUpdateRequest(entityName: "Episode")
+        
+        // 2. Target only this podcast's episodes
+        batchRequest.predicate = NSPredicate(format: "podcast == %@", podcast.objectID)
+        
+        // 3. Set the update dictionary
+        batchRequest.propertiesToUpdate = ["listened": true]
+        batchRequest.resultType = .updatedObjectIDsResultType
+
+        do {
+            let result = try persistence.viewContext.execute(batchRequest) as? NSBatchUpdateResult
+            let objectIDs = result?.result as? [NSManagedObjectID] ?? []
+            
+            // 4. IMPORTANT: Merge the changes back to the UI
+            // Batch updates bypass the context, so we have to tell the UI things changed
+            NSManagedObjectContext.mergeChanges(
+                fromRemoteContextSave: [NSUpdatedObjectsKey: objectIDs],
+                into: [persistence.viewContext]
+            )
+           unlistenedEpisodes = try loadunlistenedEpisodes()
+        } catch {
+            print("Failed to batch update: \(error)")
+        }
+    }
+    
     func markEpisodeAsListened(_ episode: Episode) {
         episode.listened = true
         unlistenedEpisodes.removeAll { listEpisode in
             listEpisode.guid == episode.guid
         }
+        try? persistence.viewContext.save()
+    }
+    
+    func markEpisodeAsManuallyDownloaded(_ episode: Episode) {
+        episode.manualDownload = true
         try? persistence.viewContext.save()
     }
     

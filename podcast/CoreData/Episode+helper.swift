@@ -9,6 +9,16 @@
 import Foundation
 import CoreData
 
+extension RelativeDateTimeFormatter {
+    // Static means it's created once and shared across the whole app
+    static let shared: RelativeDateTimeFormatter = {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .full
+        formatter.dateTimeStyle = .named
+        return formatter
+    }()
+}
+
 extension Episode {
     
     @discardableResult
@@ -40,8 +50,28 @@ extension Episode {
     }
     
     var formattedDate: String {
-        guard let date = publishedDate else { return "Unknown Date" }
-        return formatDate(time: date)
+        guard let date = publishedDate else { return "" }
+        let calendar = Calendar.current
+        
+        // 1. Handle the "Relative" cases first
+        if calendar.isDateInToday(date) {
+            return "Today"
+        }
+        
+        if calendar.isDateInYesterday(date) {
+            return "Yesterday"
+        }
+        
+        // 2. Handle the "Calendar Year" check
+        let isThisYear = calendar.isDate(date, equalTo: Date(), toGranularity: .year)
+        
+        if isThisYear {
+            // "Feb 4"
+            return date.formatted(.dateTime.month(.abbreviated).day())
+        } else {
+            // "Feb 4, 2025"
+            return date.formatted(date: .abbreviated, time: .omitted)
+        }
     }
     
     static func allRecent() -> NSFetchRequest<Episode> {
@@ -173,6 +203,10 @@ extension Episode {
     func savedFileName() -> String {
         let episodeTitle = self.title?.replacingOccurrences(of: "/", with: "-") ?? "episode"
         return "\(episodeTitle)-\(self.guid ?? "Default Guid")"
+    }
+    
+    var cleanedGuid: String {
+        self.guid ?? self.title ?? "No guid or title"
     }
 }
 
