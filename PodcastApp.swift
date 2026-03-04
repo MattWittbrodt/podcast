@@ -11,15 +11,18 @@ import AVFoundation
 
 struct ContentViewFactory {
     @MainActor static func makeContentView(persistence: PersistenceManager = PersistenceManager()) -> ContentView {
+        let downloadManager = DownloadManager()
+        
         // 1. Create the base dependency
-        let dataManager = DataManager(persistence: persistence)
+        let dataManager = DataManager(persistence: persistence, downloadManager: downloadManager)
         
         // 2. Create the dependent object using the fully initialized dataManager
         let discoveryManager = DiscoveryManager(dataManager: dataManager)
-        let downloadManager = DownloadManager(dataManager: dataManager)
         let podcastFeedService = PodcastFeedService(dataManager: dataManager)
-        let playbackManager = PlaybackManager(downloadManager: downloadManager, dataManager: dataManager)
-        let settingsManager = SettingsManager(downloadManager: downloadManager, dataManager: dataManager)
+        let settingsManager = SettingsManager(dataManager: dataManager)
+        let playbackManager = PlaybackManager(downloadManager: downloadManager, dataManager: dataManager, settingsManager: settingsManager)
+        
+        downloadManager.allowCellularDownloads = { settingsManager.allowCellularDownloads }
         
         // 3. Return the fully initialized ContentView
         return ContentView(

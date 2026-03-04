@@ -10,8 +10,19 @@ import Combine
 import CoreData
 import AVKit
 
+struct DownloadData {
+    let episodeId: NSManagedObjectID
+    let guid: String
+    let filePath: String
+}
+
 class DownloadManager: NSObject, ObservableObject, URLSessionDownloadDelegate {
-    private let dataManager: DataManager
+    //private let dataManager: DataManager
+    private let networkMonitor: NetworkMonitor = NetworkMonitor()
+    
+    // A closure that returns (EpisodeID, FinalFileUrl)
+    var onDownloadFinished: ((String, URL) -> Void)?
+    var allowCellularDownloads: (() -> Bool)?
     
     // Must be a unique identifier for your app's downloads
     static let backgroundIdentifier = "com.planecast.Planecast"
@@ -19,7 +30,6 @@ class DownloadManager: NSObject, ObservableObject, URLSessionDownloadDelegate {
     // The central hub for all state changes. It broadcasts a tuple: (Episode, new DownloadState)
     //private let downloadStateSubject = PassthroughSubject<(NSManagedObjectID, DownloadState), Never>()
     private var currentStates: [NSManagedObjectID: CurrentValueSubject<DownloadState, Never>] = [:]
-    //private var currentStates: [NSManagedObjectID: DownloadState] = [:]
     
     // The Set acts as the real-time log of episode IDs currently being downloaded.
     @Published var activeDownloads: Set<NSManagedObjectID> = []
@@ -31,7 +41,7 @@ class DownloadManager: NSObject, ObservableObject, URLSessionDownloadDelegate {
     }()
     
     // Internal Mapping (needed for tracking task completion)
-    private var taskMap: [Int: NSManagedObjectID] = [:]
+    private var taskMap: [Int: DownloadData] = [:]
     
     let downloadsDirectory: URL
     
@@ -52,8 +62,7 @@ class DownloadManager: NSObject, ObservableObject, URLSessionDownloadDelegate {
         }
     }
     
-    init(dataManager: DataManager) {
-        self.dataManager = dataManager
+    override init() {
         // 1. Call the function/logic to get and create the directory
         guard let url = DownloadManager.setupDownloadsDirectory() else {
             // 2. Handle the fatal error if the directory setup is mandatory
@@ -68,25 +77,34 @@ class DownloadManager: NSObject, ObservableObject, URLSessionDownloadDelegate {
 // MARK: - Public API
 extension DownloadManager {
     
-    func startDownload(for episode: Episode) {
-        guard !downloadFileExists(for: episode), !activeDownloads.contains(episode.objectID)
-        else {
-            print("Download skipped: already downloaded or in progress.")
+    func stopCellularDownload() -> Bool {
+        let userDisabledCellular = !(allowCellularDownloads?() ?? false)        
+        return networkMonitor.isCellular && userDisabledCellular
+    }
+    
+    func startDownload(for episode: Episode, manualOverride: Bool = false) {
+        // First, check if we can even download
+        if stopCellularDownload() && !manualOverride {
             return
         }
         
-        guard let episodeUrl = URL(string: episode.enclosureUrl!) else {
-            print("Bad enclosure URL or guid")
+        guard !downloadFileExists(for: episode), !activeDownloads.contains(episode.objectID)
+        else {
+            return
+        }
+        
+        guard let epUrl = episode.enclosureUrl, let episodeUrl = URL(string: epUrl) else {
+            print("Bad enclosure URL or guid: \(episode.podcast?.title ?? "Unknown podcast")")
             return
         }
         
         let task = urlSession.downloadTask(with: episodeUrl)
-        taskMap[task.taskIdentifier] = episode.objectID
-        
+        taskMap[task.taskIdentifier] = DownloadData(episodeId: episode.objectID, guid: episode.cleanedGuid, filePath: episode.savedFileName())
+                
         // Add episode ID to the active log and update the state subject
         self.update(episodeId: episode.objectID, newState: .downloading)
         DispatchQueue.main.async {
-            self.activeDownloads.insert(episode.objectID)            
+            self.activeDownloads.insert(episode.objectID)
         }
         
         task.resume()
@@ -107,7 +125,7 @@ extension DownloadManager {
     }
     
     func downloadFileExists(for episode: Episode) -> Bool {
-        guard let episodePath = self.generateStoreFilePath(for: episode) else {
+        guard let episodePath = self.generateStoreFilePath(for: episode.savedFileName()) else {
             print("❌ No file path")
             return false
         }
@@ -115,11 +133,11 @@ extension DownloadManager {
     }
     
     func getFullDownloadPath(for episode: Episode) -> URL? {
-        return self.generateStoreFilePath(for: episode)
+        return self.generateStoreFilePath(for: episode.savedFileName())
     }
     
     func removeDownload(for episode: Episode) {
-        guard let episodePath = self.generateStoreFilePath(for: episode) else {
+        guard let episodePath = self.generateStoreFilePath(for: episode.savedFileName()) else {
             print("❌ No file path")
             return
         }
@@ -159,71 +177,53 @@ extension DownloadManager {
     
     // Called when the network transfer has finished and we need to handle result
     func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didFinishDownloadingTo location: URL) {
-        guard let episodeId = taskMap[downloadTask.taskIdentifier] else { return }
-        let backgroundContext = dataManager.persistence.container.newBackgroundContext()
-        
-        var episode: Episode?
-        backgroundContext.performAndWait {
-            do {
-                // Fetch the object using the thread-safe ID
-                let backgroundEpisode = try backgroundContext.existingObject(with: episodeId)
-                episode = backgroundEpisode as? Episode
-            } catch {
-                print("Error fetching episode in background: \(error)")
-            }
-        }
-        guard let finalEpisode = episode else { print("no episode"); return }
-        guard let destinationURL = generateStoreFilePath(for: finalEpisode) else { return }
+        guard let downloadData = taskMap[downloadTask.taskIdentifier] else { return }
+        guard let destinationURL = generateStoreFilePath(for: downloadData.filePath) else { return }
         
         let fm = FileManager.default
         if fm.fileExists(atPath: destinationURL.path) {
             try? fm.removeItem(at: destinationURL)
         }
-
+        
         do {
             try fm.moveItem(at: location, to: destinationURL)
-            
-            // 2. ✅ Calculate the actual duration of the downloaded file
-            var finalDuration: Int16 = 0
+            onDownloadFinished?(downloadData.guid, destinationURL)
+            // Cleanup for state
             Task { @MainActor in
-                let asset = AVURLAsset(url: destinationURL)
-                let durationCMTime = try await asset.load(.duration)
-                let durationSeconds = CMTimeGetSeconds(durationCMTime)
-                if durationSeconds.isFinite {
-                    finalDuration = Int16(durationSeconds)
-                }
-                                
-                backgroundContext.performAndWait {
-                    do {
-                        // Re-fetch the episode into the background context to ensure it's still valid
-                        let episodeToUpdate = try backgroundContext.existingObject(with: episodeId) as! Episode
-                        episodeToUpdate.duration = finalDuration
-                        try backgroundContext.save()
-                        
-                        // Since this is Core Data, you should also notify the main context of changes
-                        dataManager.saveMainContext()
-                        
-                    } catch {
-                        print("Error updating and saving episode duration: \(error)")
-                    }
-                }
-            }
-
-            // 5. Dispatch UI/Combine updates to the Main Actor
-            Task { @MainActor in
-                self.activeDownloads.remove(episodeId)
-                self.update(episodeId: episodeId, newState: DownloadState.downloaded)
+                self.activeDownloads.remove(downloadData.episodeId)
+                self.update(episodeId: downloadData.episodeId, newState: DownloadState.downloaded)
                 self.taskMap.removeValue(forKey: downloadTask.taskIdentifier)
             }
         } catch {
             print("Error during file finalization: \(error.localizedDescription)")
             
             Task { @MainActor in
-                self.activeDownloads.remove(episodeId)
-                self.update(episodeId: episodeId, newState: DownloadState.failed)
+                self.activeDownloads.remove(downloadData.episodeId)
+                self.update(episodeId: downloadData.episodeId, newState: DownloadState.failed)
             }
         }
     }
+            
+            // 2. ✅ Calculate the actual duration of the downloaded file
+//            var finalDuration: Int16 = 0
+//            Task { @MainActor in
+//                let asset = AVURLAsset(url: destinationURL)
+//                let durationCMTime = try await asset.load(.duration)
+//                let durationSeconds = CMTimeGetSeconds(durationCMTime)
+//                if durationSeconds.isFinite {
+//                    finalDuration = Int16(durationSeconds)
+//                }
+//                                
+//                backgroundContext.performAndWait {
+//                    do {
+//                        // Re-fetch the episode into the background context to ensure it's still valid
+//                        let episodeToUpdate = try backgroundContext.existingObject(with: episodeId) as! Episode
+//                        episodeToUpdate.duration = finalDuration
+//                        try backgroundContext.save()
+//                        
+//                        // Since this is Core Data, you should also notify the main context of changes
+//                        dataManager.saveMainContext()
+//
     
     // If progress updates/logging is desired
     func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didWriteData bytesWritten: Int64, totalBytesWritten: Int64, totalBytesExpectedToWrite: Int64) {
@@ -236,11 +236,11 @@ extension DownloadManager {
     
     // Called when task is finished with an error. Removes failed download from active download
     func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
-        if let error = error {
-            if let episodeId = taskMap[task.taskIdentifier] {
+        if error != nil {
+            if let downloadData = taskMap[task.taskIdentifier] {
                 // Clean up: remove episode ID from the active log
                 DispatchQueue.main.async {
-                    self.activeDownloads.remove(episodeId)
+                    self.activeDownloads.remove(downloadData.episodeId)
                     self.taskMap.removeValue(forKey: task.taskIdentifier)
                 }
             }
@@ -271,8 +271,8 @@ extension DownloadManager {
         }
     }
     
-    func generateStoreFilePath(for episode: Episode) -> URL? {
-        let fileName = "\(episode.savedFileName()).mp3"
+    func generateStoreFilePath(for savedFileName: String) -> URL? {
+        let fileName = "\(savedFileName).mp3"
         let sanitizedFileName = sanitizeFileName(fileName)
         return self.downloadsDirectory.appendingPathComponent(sanitizedFileName)
     }

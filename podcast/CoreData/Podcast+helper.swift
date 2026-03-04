@@ -61,23 +61,7 @@ extension Podcast {
         request.predicate = NSPredicate(format: "feedId == %d", feedId)
         return request
     }
-    
-    //MARK: Preview Helpers
-//    static var example: Podcast {
-//        let context = PersistenceController.preview.container.viewContext
-//        let testPodcast = Podcast(
-//            title: "The 59th Minute FPL Podcast",
-//            author: "FPL General",
-//            image: "https://megaphone.imgix.net/podcasts/28b51a68-e5c0-11ed-8327-fbf3235c5405/image/60854458c4d1acdf4e1c2f79c4137142d85d78e379bdafbd69bd34c85f5819ad.jpg?ixlib=rails-4.3.1&max-w=3000&max-h=3000&fit=crop&auto=format,compress",
-//            podcastDescription: "The FPL General helps Fantasy Football managers prepare for each Gameweek, offering his thoughts on captaincy, transfers and a look at his 'watchlist' of the best players.",
-//            feedUrl: "https://feeds.megaphone.fm/COMG4750541235",
-//            context: context
-//        )
-//        
-//        return testPodcast
-//    }
 }
-
 
 extension Podcast {
     /// Configures a Podcast managed object with RSS channel data

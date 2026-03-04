@@ -83,6 +83,8 @@ private extension DiscoveryManager {
             let imgData = try? await loadImageFromWeb(url: channelFromRSS.imageUrl)
             channelFromRSS.podcastImageData = imgData
             
+            print("after parsing: \(channelFromRSS.link)")
+            
             await MainActor.run {
                 self.rssChannel = channelFromRSS
             }

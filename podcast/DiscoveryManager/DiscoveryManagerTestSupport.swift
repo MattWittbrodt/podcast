@@ -12,7 +12,7 @@ extension DiscoveryManager {
     @MainActor
     static var preview: DiscoveryManager {
         let pm = PersistenceManager(inMemory: true)
-        let dm = DataManager(persistence: pm)
+        let dm = DataManager(persistence: pm, downloadManager: DownloadManager())
         let manager = DiscoveryManager(dataManager: dm)
         
         // Mock selected podcast

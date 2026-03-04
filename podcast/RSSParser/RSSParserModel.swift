@@ -120,7 +120,7 @@ private struct RSSChannelBuilder {
         if element == "title" && title != "" {
             return
         }
-                
+                        
         switch element {
         case "title": title += value
         case "itunes:author": author += value
@@ -129,7 +129,9 @@ private struct RSSChannelBuilder {
                 link += value
             }
         case "atom:link":
-            if !value.isEmpty {
+            // Some RSS feeds can have multiple atom:link
+            // Generally the first one is the feed
+            if !value.isEmpty && !usedatomLink {
                 link = value
             }
             usedatomLink = true
