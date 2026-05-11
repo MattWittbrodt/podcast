@@ -77,21 +77,21 @@ struct PodcastView: View {
     }
 }
 
-#Preview {
-    @Previewable @State var showFullPlayer: Bool = false
-    let dm = DataManager.preview
-    let _ = print("here: \(dm.podcasts.count)")
-    let dlManager = DownloadManager()
-    
-    let sm = SettingsManager(dataManager: dm)
-    let pbM = PlaybackManager(downloadManager: dlManager, dataManager: dm, settingsManager: sm)
-    
-    let samplePodcast = Podcast.createSample(context: dm.persistence.viewContext)
-    
-    PodcastView(podcast: samplePodcast, showFullPlayer: $showFullPlayer)
-        .environmentObject(dm)
-        .environmentObject(pbM)
-        .environmentObject(dlManager)
-        .environmentObject(ThemeManager())
-
-}
+//#Preview {
+//    @Previewable @State var showFullPlayer: Bool = false
+//    let dm = DataManager.preview
+//    let _ = print("here: \(dm.podcasts.count)")
+//    let dlManager = DownloadManager()
+//    
+//    let sm = SettingsManager(dataManager: dm)
+//    let pbM = PlaybackManager(downloadManager: dlManager, dataManager: dm, settingsManager: sm)
+//    
+//    let samplePodcast = Podcast.createSample(context: dm.persistence.viewContext)
+//    
+//    PodcastView(podcast: samplePodcast, showFullPlayer: $showFullPlayer)
+//        .environmentObject(dm)
+//        .environmentObject(pbM)
+//        .environmentObject(dlManager)
+//        .environmentObject(ThemeManager())
+//
+//}

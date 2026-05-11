@@ -40,7 +40,7 @@ class DataManager: NSObject, ObservableObject {
             self?.handleFinishedDownload(guid: guid, fileUrl: fileUrl)
         }
     }
-    
+        
     func loadInitialData() {
         do {
             let request = Podcast.fetchRequest()
@@ -317,25 +317,25 @@ extension DataManager {
 //MARK: Chapter saving functions
 extension DataManager {
     
-    func updateEpisodesWithChapters() async {
-        do {
-            let chapterEpisodes = try self.loadUnlistenedEpisodesWithChapters()
-            if !chapterEpisodes.isEmpty {
-                print("Found \(chapterEpisodes.count) episodes with chapters to link...")
-                for ep in chapterEpisodes {
-                    do {
-                        guard let chaptersUrl = ep.chaptersUrl,
-                              let decodedChapters = try await PodcastFeedService.fetchNewChapters(for: chaptersUrl) else { continue }
-                        try await self.updateChapters(for: ep.objectID, with: decodedChapters.chapters)
-                    } catch {
-                        print("Failed to get chapters for: \(ep.title ?? "podcast title missing") - \(ep.chaptersUrl ?? "")")
-                    }
-                }
-            }
-        } catch {
-            print("Overall error: \(error)")
-        }
-    }
+//    func updateEpisodesWithChapters() async {
+//        do {
+//            let chapterEpisodes = try self.loadUnlistenedEpisodesWithChapters()
+//            if !chapterEpisodes.isEmpty {
+//                print("Found \(chapterEpisodes.count) episodes with chapters to link...")
+//                for ep in chapterEpisodes {
+//                    do {
+//                        guard let chaptersUrl = ep.chaptersUrl,
+//                              let decodedChapters = try await PodcastFeedService.fetchNewChapters(for: chaptersUrl) else { continue }
+//                        try await self.updateChapters(for: ep.objectID, with: decodedChapters.chapters)
+//                    } catch {
+//                        print("Failed to get chapters for: \(ep.title ?? "podcast title missing") - \(ep.chaptersUrl ?? "")")
+//                    }
+//                }
+//            }
+//        } catch {
+//            print("Overall error: \(error)")
+//        }
+//    }
     
     func updateChapters(for episodeID: NSManagedObjectID, with chapterInfos: [ChapterInfo]) async throws {
         

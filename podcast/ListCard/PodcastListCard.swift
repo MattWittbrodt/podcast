@@ -44,11 +44,11 @@ struct PodcastListCard: View {
     }
 }
 
-#Preview {
-    let dm = DataManager.preview
-    let sample = dm.podcasts.first!
-    
-    PodcastListCard(title: sample.title,
-                    author: sample.author,
-                    image: sample.imageUrl)
-}
+//#Preview {
+//    let dm = DataManager.preview
+//    let sample = dm.podcasts.first!
+//    
+//    PodcastListCard(title: sample.title,
+//                    author: sample.author,
+//                    image: sample.imageUrl)
+//}

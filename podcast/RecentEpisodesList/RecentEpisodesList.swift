@@ -20,6 +20,11 @@ struct RecentEpisodesList: View {
     @State private var activeAlert: AlertType?
     @State private var inFocusEpisode: Episode?
     
+    @FetchRequest(
+            sortDescriptors: [NSSortDescriptor(keyPath: \Episode.publishedDate, ascending: false)],
+            predicate: NSPredicate(format: "listened == false")
+    ) var episodes: FetchedResults<Episode>
+    
     let updateEpisodes: () async -> Void
     
     init(updateEpisodes: @escaping () async -> Void, showFullPlayer: Binding<Bool>) {
@@ -86,7 +91,7 @@ struct RecentEpisodesList: View {
     }
 
     private func episodeListContent() -> some View {
-        ForEach(dataManager.unlistenedEpisodes, id: \.objectID) { episode in
+        ForEach(episodes, id: \.objectID) { episode in
             EpisodeListCard(episode: episode)
                 .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
                 .listRowBackground(Color.clear)
@@ -118,16 +123,15 @@ struct RecentEpisodesList: View {
             
             Button(action: {
                 inFocusEpisode = episode
-                activeAlert = .cellularDownload
                 
-//                if downloadManager.stopCellularDownload() {
-//                    inFocusEpisode = episode
-//                    activeAlert = .cellularDownload
-//                } else {
-//                    Task {
-//                        manualDownload(for: episode)
-//                    }
-//                }
+                if downloadManager.stopCellularDownload() {
+                    inFocusEpisode = episode
+                    activeAlert = .cellularDownload
+                } else {
+                    Task {
+                        manualDownload(for: episode)
+                    }
+                }
             })
             {
                 Label("Download", systemImage: "square.and.arrow.down.fill")

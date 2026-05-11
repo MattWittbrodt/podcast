@@ -87,17 +87,17 @@ struct PodcastList: View {
 }
 
 
-#Preview {
-    @Previewable @State var showFullPlayer: Bool = false
-    let dm = DataManager.preview
-    let dlManager = DownloadManager()
-    let _ = print("here2: \(dm.podcasts.count)")
-    let sm = SettingsManager(dataManager: dm)
-    let pbM = PlaybackManager(downloadManager: dlManager, dataManager: dm, settingsManager: sm)
-    
-    PodcastList(showFullPlayer: $showFullPlayer)
-        .environmentObject(dm)
-        .environmentObject(pbM)
-        .environmentObject(DownloadManager())
-        .environmentObject(ThemeManager())
-}
+//#Preview {
+//    @Previewable @State var showFullPlayer: Bool = false
+//    let dm = DataManager.preview
+//    let dlManager = DownloadManager()
+//    let _ = print("here2: \(dm.podcasts.count)")
+//    let sm = SettingsManager(dataManager: dm)
+//    let pbM = PlaybackManager(downloadManager: dlManager, dataManager: dm, settingsManager: sm)
+//    
+//    PodcastList(showFullPlayer: $showFullPlayer)
+//        .environmentObject(dm)
+//        .environmentObject(pbM)
+//        .environmentObject(DownloadManager())
+//        .environmentObject(ThemeManager())
+//}

@@ -21,44 +21,45 @@ struct ContentView: View {
     @StateObject var feedService: PodcastFeedService
     @StateObject var playbackManager: PlaybackManager
     @StateObject var settingsManager: SettingsManager
+    var useCaseProvider: UseCaseProvider
     
-    func updateEpisodes() async {
-        let newEpisodes = await feedService.updateAllSubscribedPodcasts()
-        
-        // Updating chapters
-        await dataManager.updateEpisodesWithChapters()
-        
-        // Continue handling episodes
-        dataManager.handleNewEpisodes(episodes: newEpisodes)
-        
-        // Checking for unlistened episodes that are not downloaded
-        let groupedByPodcast = Dictionary(grouping: dataManager.unlistenedEpisodes, by: { $0.podcast?.title ?? "Unknown Podcast" })
-
-        // Map over each group to sort and take the top 3
-        let possibleDownloads = groupedByPodcast.mapValues { episodes in
-            episodes
-                .sorted { $0.publishedDate ?? .distantPast > $1.publishedDate ?? .distantPast}
-                .prefix(Int(settingsManager.numDownloads))
-        }.values.flatMap { $0 }
-        
-        // Passing through start download. For possibleDownloads, startDownload will simply return if already downloaded
-        for episode in newEpisodes + possibleDownloads {
-            downloadManager.startDownload(for: episode)
-        }
-        
-        // For unlistened episodes not in the download list, remove download to save space on device
-        for episode in dataManager.unlistenedEpisodes {
-            if !possibleDownloads.contains(episode) && episode.manualDownload == false {
-                downloadManager.removeDownload(for: episode)
-            }
-        }
-    }
+//    func updateEpisodes() async {
+//        let newEpisodes = await feedService.updateAllSubscribedPodcasts()
+//        
+//        // Updating chapters
+//        await dataManager.updateEpisodesWithChapters()
+//        
+//        // Continue handling episodes
+//        dataManager.handleNewEpisodes(episodes: newEpisodes)
+//        
+//        // Checking for unlistened episodes that are not downloaded
+//        let groupedByPodcast = Dictionary(grouping: dataManager.unlistenedEpisodes, by: { $0.podcast?.title ?? "Unknown Podcast" })
+//
+//        // Map over each group to sort and take the top 3
+//        let possibleDownloads = groupedByPodcast.mapValues { episodes in
+//            episodes
+//                .sorted { $0.publishedDate ?? .distantPast > $1.publishedDate ?? .distantPast}
+//                .prefix(Int(settingsManager.numDownloads))
+//        }.values.flatMap { $0 }
+//        
+//        // Passing through start download. For possibleDownloads, startDownload will simply return if already downloaded
+//        for episode in newEpisodes + possibleDownloads {
+//            downloadManager.startDownload(for: episode)
+//        }
+//        
+//        // For unlistened episodes not in the download list, remove download to save space on device
+//        for episode in dataManager.unlistenedEpisodes {
+//            if !possibleDownloads.contains(episode) && episode.manualDownload == false {
+//                downloadManager.removeDownload(for: episode)
+//            }
+//        }
+//    }
     
     var body: some View {
         ZStack(alignment: .bottom) {
             TabView {
                 Tab("Home", systemImage: "house") {
-                    RecentEpisodesList(updateEpisodes: updateEpisodes,
+                    RecentEpisodesList(updateEpisodes: useCaseProvider.makeRefreshLibraryUseCase().execute,
                                        showFullPlayer: $showFullPlayer)
                     .environmentObject(themeManager)
                     .toolbar(.visible, for: .tabBar)
@@ -121,7 +122,7 @@ struct ContentView: View {
         .onChange(of: scenePhase) { oldValue, newValue in
             if newValue == .active {
                 Task {
-                    await updateEpisodes()
+                    await useCaseProvider.makeRefreshLibraryUseCase().execute()
                 }
             }
         }
