@@ -20,11 +20,6 @@ struct RecentEpisodesList: View {
     @State private var activeAlert: AlertType?
     @State private var inFocusEpisode: Episode?
     
-    @FetchRequest(
-            sortDescriptors: [NSSortDescriptor(keyPath: \Episode.publishedDate, ascending: false)],
-            predicate: NSPredicate(format: "listened == false")
-    ) var episodes: FetchedResults<Episode>
-    
     let updateEpisodes: () async -> Void
     
     init(updateEpisodes: @escaping () async -> Void, showFullPlayer: Binding<Bool>) {
@@ -91,7 +86,7 @@ struct RecentEpisodesList: View {
     }
 
     private func episodeListContent() -> some View {
-        ForEach(episodes, id: \.objectID) { episode in
+        ForEach(dataManager.unlistenedEpisodes, id: \.objectID) { episode in
             EpisodeListCard(episode: episode)
                 .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
                 .listRowBackground(Color.clear)

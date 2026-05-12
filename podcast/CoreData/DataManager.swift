@@ -27,19 +27,64 @@ class DataManager: NSObject, ObservableObject {
         }
     }
     
+    private let episodeController: NSFetchedResultsController<Episode>
+    private let podcastController: NSFetchedResultsController<Podcast>
+    
     // For chapter updates. pushing to main thread
     typealias ChapterUpdateCompletion = @MainActor (Result<[Chapter]?, Error>) -> Void
     
     init(persistence: PersistenceManager, downloadManager: DownloadManager) {
         self.persistence = persistence
         self.downloadManager = downloadManager
+        
+        let episodeRequest = Episode.fetchRequest()
+        episodeRequest.sortDescriptors = [NSSortDescriptor(keyPath: \Episode.publishedDate, ascending: false)]
+        episodeRequest.predicate = NSPredicate(format: "listened == false")
+        
+        // 2. Setup the Monitor
+        self.episodeController = NSFetchedResultsController(
+            fetchRequest: episodeRequest,
+            managedObjectContext: persistence.viewContext,
+            sectionNameKeyPath: nil,
+            cacheName: nil
+        )
+        
+        // 1. Setup the Podcast Fetch Request
+        let podcastRequest: NSFetchRequest<Podcast> = Podcast.fetchRequest()
+        podcastRequest.sortDescriptors = [NSSortDescriptor(keyPath: \Podcast.title_, ascending: true)]
+        
+        // 2. Setup the Podcast Monitor
+        self.podcastController = NSFetchedResultsController(
+            fetchRequest: podcastRequest,
+            managedObjectContext: persistence.viewContext,
+            sectionNameKeyPath: nil,
+            cacheName: nil
+        )
+        
         super.init()
-        loadInitialData()
-        // This is the "Glue" code
-        self.downloadManager.onDownloadFinished = { [weak self] guid, fileUrl in
-            self?.handleFinishedDownload(guid: guid, fileUrl: fileUrl)
-        }
+        
+        // 3. Start Monitoring
+        self.episodeController.delegate = self
+        self.podcastController.delegate = self
+        
+        try? episodeController.performFetch()
+        try? podcastController.performFetch()
+        
+        // Initial population
+        self.unlistenedEpisodes = episodeController.fetchedObjects ?? []
+        self.podcasts = podcastController.fetchedObjects ?? []
     }
+    
+//    init(persistence: PersistenceManager, downloadManager: DownloadManager) {
+//        self.persistence = persistence
+//        self.downloadManager = downloadManager
+//        super.init()
+//        loadInitialData()
+//        // This is the "Glue" code
+//        self.downloadManager.onDownloadFinished = { [weak self] guid, fileUrl in
+//            self?.handleFinishedDownload(guid: guid, fileUrl: fileUrl)
+//        }
+//    }
         
     func loadInitialData() {
         do {
@@ -393,6 +438,21 @@ extension DataManager {
                 
                 try backgroundContext.save()
                 print("Successfully saved new chapters for: \(episodeInContext.title ?? "title missing")")
+            }
+        }
+    }
+}
+
+extension DataManager: NSFetchedResultsControllerDelegate {
+    func controllerDidChangeContent(_ controller: NSFetchedResultsController<NSFetchRequestResult>) {
+        // Any save anywhere in the app triggers this automatically
+        DispatchQueue.main.async {
+            //self.unlistenedEpisodes = self.fetchedResultsController.fetchedObjects ?? []
+            // 4. Distinguish which controller updated
+            if controller == self.episodeController {
+                self.unlistenedEpisodes = self.episodeController.fetchedObjects ?? []
+            } else if controller == self.podcastController {
+                self.podcasts = self.podcastController.fetchedObjects ?? []
             }
         }
     }
