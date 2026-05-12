@@ -16,11 +16,21 @@ struct ContentViewFactory {
         // 1. Create the base dependency
         let dataManager = DataManager(persistence: persistence, downloadManager: downloadManager)
         
+        let podcastRepository = PodcastRepository(dataManager: dataManager)
+        let episodeRepository = EpisodeRepository(dataManager: dataManager)
+        
         // 2. Create the dependent object using the fully initialized dataManager
         let discoveryManager = DiscoveryManager(dataManager: dataManager)
-        let podcastFeedService = PodcastFeedService(dataManager: dataManager)
+        let podcastFeedService = PodcastFeedService()
         let settingsManager = SettingsManager(dataManager: dataManager)
         let playbackManager = PlaybackManager(downloadManager: downloadManager, dataManager: dataManager, settingsManager: settingsManager)
+        
+        // 3. Create the UseCaseProvider (The Logic Hub)
+        let useCaseProvider = UseCaseProvider(
+            podcastRepository: podcastRepository,
+            downloadManager: downloadManager,
+            episodeRepository: episodeRepository
+        )
         
         downloadManager.allowCellularDownloads = { settingsManager.allowCellularDownloads }
         
@@ -31,7 +41,8 @@ struct ContentViewFactory {
             dataManager: dataManager,
             feedService: podcastFeedService,
             playbackManager: playbackManager,
-            settingsManager: settingsManager
+            settingsManager: settingsManager,
+            useCaseProvider: useCaseProvider
         )
     }
 }

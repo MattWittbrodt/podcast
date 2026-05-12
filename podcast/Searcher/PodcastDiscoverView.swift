@@ -78,8 +78,8 @@ struct PodcastDiscoverView: View {
     }
 }
 
-#Preview {
-    PodcastDiscoverView()
-        .environmentObject(DiscoveryManager.preview)
-        .environmentObject(ThemeManager())
-}
+//#Preview {
+//    PodcastDiscoverView()
+//        .environmentObject(DiscoveryManager.preview)
+//        .environmentObject(ThemeManager())
+//}

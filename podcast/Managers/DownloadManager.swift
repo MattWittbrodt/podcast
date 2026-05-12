@@ -102,9 +102,8 @@ extension DownloadManager {
         taskMap[task.taskIdentifier] = DownloadData(episodeId: episode.objectID, guid: episode.cleanedGuid, filePath: episode.savedFileName())
                 
         // Add episode ID to the active log and update the state subject
-        self.update(episodeId: episode.objectID, newState: .downloading)
-        DispatchQueue.main.async {
-            self.activeDownloads.insert(episode.objectID)
+        Task { @MainActor in
+            self.update(episodeId: episode.objectID, newState: .downloading)
         }
         
         task.resume()
@@ -144,7 +143,9 @@ extension DownloadManager {
         do {
             if downloadFileExists(for: episode) {
                 try FileManager.default.removeItem(at: episodePath)
-                update(episodeId: episode.objectID, newState: .notDownloaded)
+                Task { @MainActor in
+                    self.update(episodeId: episode.objectID, newState: .notDownloaded)
+                }
             }
         } catch {
             print("❌ Download not removed")
@@ -258,16 +259,36 @@ extension DownloadManager {
 // MARK: Internal API
 extension DownloadManager {
     
+//    @MainActor
+//    private func update(episodeId: NSManagedObjectID, newState: DownloadState) {
+//        if let existingSubject = currentStates[episodeId] {
+//            // 1. Check for genuine change (CurrentValueSubject allows easy comparison)
+//            guard existingSubject.value != newState else { return }
+//            
+//            // 2. Updating .value automatically broadcasts to all subscribers
+//            existingSubject.value = newState
+//        } else {
+//            // 3. If no one is listening yet, create the subject with the new state
+//            currentStates[episodeId] = CurrentValueSubject<DownloadState, Never>(newState)
+//        }
+//    }
+    
+    @MainActor
     private func update(episodeId: NSManagedObjectID, newState: DownloadState) {
+        // 1. Update the individual episode's publisher
         if let existingSubject = currentStates[episodeId] {
-            // 1. Check for genuine change (CurrentValueSubject allows easy comparison)
             guard existingSubject.value != newState else { return }
-            
-            // 2. Updating .value automatically broadcasts to all subscribers
             existingSubject.value = newState
         } else {
-            // 3. If no one is listening yet, create the subject with the new state
             currentStates[episodeId] = CurrentValueSubject<DownloadState, Never>(newState)
+        }
+
+        // 2. Synchronize the "Active Downloads" set
+        switch newState {
+        case .downloading:
+            activeDownloads.insert(episodeId)
+        case .downloaded, .failed, .notDownloaded:
+            activeDownloads.remove(episodeId)
         }
     }
     

@@ -107,13 +107,13 @@ struct SettingsView: View {
     }
 }
 
-#Preview {
-    let dataManager = DataManager.preview
-    let settingsManager = SettingsManager(dataManager: dataManager)
-    let downloadManager = DownloadManager()
-    //downloadManager.allowCellularDownloads = { settingsManager.allowCellularDownloads }
-    
-    SettingsView()
-        .environmentObject(ThemeManager())
-        .environmentObject(settingsManager)
-}
+//#Preview {
+//    let dataManager = DataManager.preview
+//    let settingsManager = SettingsManager(dataManager: dataManager)
+//    let downloadManager = DownloadManager()
+//    //downloadManager.allowCellularDownloads = { settingsManager.allowCellularDownloads }
+//    
+//    SettingsView()
+//        .environmentObject(ThemeManager())
+//        .environmentObject(settingsManager)
+//}

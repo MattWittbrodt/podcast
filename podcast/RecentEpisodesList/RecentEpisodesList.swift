@@ -118,16 +118,15 @@ struct RecentEpisodesList: View {
             
             Button(action: {
                 inFocusEpisode = episode
-                activeAlert = .cellularDownload
                 
-//                if downloadManager.stopCellularDownload() {
-//                    inFocusEpisode = episode
-//                    activeAlert = .cellularDownload
-//                } else {
-//                    Task {
-//                        manualDownload(for: episode)
-//                    }
-//                }
+                if downloadManager.stopCellularDownload() {
+                    inFocusEpisode = episode
+                    activeAlert = .cellularDownload
+                } else {
+                    Task {
+                        manualDownload(for: episode)
+                    }
+                }
             })
             {
                 Label("Download", systemImage: "square.and.arrow.down.fill")

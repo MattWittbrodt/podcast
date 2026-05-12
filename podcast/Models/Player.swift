@@ -232,37 +232,37 @@ struct PlayerNotesAndImage: View {
     }
 }
 
-#Preview {
-    let dataManager = DataManager.preview
-    let settings = SettingsManager(dataManager: dataManager)
-    let downloadManager = DownloadManager()
-    
-    let pm = PlaybackManager(
-        downloadManager: downloadManager,
-        dataManager: dataManager,
-        settingsManager: settings)
-    
-    // Create sample in the same context that PlaybackManager uses
-    let episode = Episode.sample(in: dataManager.persistence.viewContext)
-    pm.currentEpisode = episode
-    pm.currentEpisodeDescription = pm.parseHTML(html: episode.episodeDescription)
-    pm.currentAudioDeviceName = "Test Device"
-    guard let uiImage = UIImage(systemName: "photo.fill")?
-        .withTintColor(.gray),
-          let data = uiImage.jpegData(compressionQuality: 1.0) else {
-        fatalError("Mock image 'placeholder_image' not found or could not be converted to Data.")
-    }
-    
-    episode.imageData = data
-    pm.currentEpisodeImage = uiImage
-    
-    let sampleChapter = Chapter.sample(in: dataManager.persistence.viewContext)
-    
-    pm.currentChapter = sampleChapter
-    pm.episodeChapters = [sampleChapter]
-    
-    return Player()
-        .environmentObject(pm)
-        .environmentObject(ThemeManager())
-        .environmentObject(settings)
-}
+//#Preview {
+//    let dataManager = DataManager.preview
+//    let settings = SettingsManager(dataManager: dataManager)
+//    let downloadManager = DownloadManager()
+//    
+//    let pm = PlaybackManager(
+//        downloadManager: downloadManager,
+//        dataManager: dataManager,
+//        settingsManager: settings)
+//    
+//    // Create sample in the same context that PlaybackManager uses
+//    let episode = Episode.sample(in: dataManager.persistence.viewContext)
+//    pm.currentEpisode = episode
+//    pm.currentEpisodeDescription = pm.parseHTML(html: episode.episodeDescription)
+//    pm.currentAudioDeviceName = "Test Device"
+//    guard let uiImage = UIImage(systemName: "photo.fill")?
+//        .withTintColor(.gray),
+//          let data = uiImage.jpegData(compressionQuality: 1.0) else {
+//        fatalError("Mock image 'placeholder_image' not found or could not be converted to Data.")
+//    }
+//    
+//    episode.imageData = data
+//    pm.currentEpisodeImage = uiImage
+//    
+//    let sampleChapter = Chapter.sample(in: dataManager.persistence.viewContext)
+//    
+//    pm.currentChapter = sampleChapter
+//    pm.episodeChapters = [sampleChapter]
+//    
+//    return Player()
+//        .environmentObject(pm)
+//        .environmentObject(ThemeManager())
+//        .environmentObject(settings)
+//}
