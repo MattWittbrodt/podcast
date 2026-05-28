@@ -28,17 +28,25 @@ struct displayEpisode: View {
 }
 
 struct PodcastDiscoverView: View {
-    @EnvironmentObject private var discoveryManager: DiscoveryManager
     @EnvironmentObject private var themeManager: ThemeManager
+    let podcastDetail: PodcastDetailDestination
+    let subscribeUseCase: SubscribeToPodcastUseCase
+    
+    init(podcastDetail: PodcastDetailDestination, useCase: SubscribeToPodcastUseCase) {
+        self.podcastDetail = podcastDetail
+        self.subscribeUseCase = useCase
+    }
     
     var body: some View {
         VStack {
             podcastHeader
                 .padding(20)
-            Text(discoveryManager.selectedPodcast?.podcast.description ?? "Missing Description")
+            Text(podcastDetail.podcast.podcast.description)
                 .lineLimit(4)
             Button {
-                discoveryManager.subscribeToPodcast()
+                Task {
+                    await subscribeUseCase.execute(podcastDetail: podcastDetail)
+                }
             }
             label: {
                 Label("Subscribe", systemImage: "plus")
@@ -52,7 +60,7 @@ struct PodcastDiscoverView: View {
     
     private var podcastHeader: some View {
         HStack {
-            if let url = URL(string: discoveryManager.selectedPodcast?.podcast.imageLink() ?? "") {
+            if let url = URL(string: podcastDetail.podcast.imageLink()) {
                 AsyncImage(url: url) { image in
                     image.resizable().aspectRatio(contentMode: .fit)
                 } placeholder: {
@@ -61,9 +69,9 @@ struct PodcastDiscoverView: View {
                 .frame(width: 75, height: 75)
             }
             VStack(alignment: .leading) {
-                Text(discoveryManager.selectedPodcast?.podcast.title ?? "Missing Title")
+                Text(podcastDetail.podcast.podcast.title)
                     .font(.headline)
-                Text(discoveryManager.selectedPodcast?.podcast.author ?? "Missing Author")
+                Text(podcastDetail.podcast.podcast.author)
                     .font(.subheadline)
             }
         }
@@ -71,7 +79,7 @@ struct PodcastDiscoverView: View {
     
     private var episodeList: some View {
         NavigationStack {
-            List(discoveryManager.rssChannel?.items ?? []) { episode in
+            List(podcastDetail.channel.items) { episode in
                 displayEpisode(episode: episode)
             }
         }

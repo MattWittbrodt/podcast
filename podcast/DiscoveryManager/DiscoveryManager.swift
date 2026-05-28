@@ -26,45 +26,29 @@ class DiscoveryManager: ObservableObject {
 extension DiscoveryManager {
     
     @MainActor
-    func search(term: String) async {
+    // TODO Add enum
+    func search(term: String) async -> [PodcastIndexInfo] {
         guard !term.isEmpty else {
-            searchResults = []
-            return
+            return []
         }
         
         do {
-            searchResults = try await searchService.searchByTerm(term: term)
+            return try await searchService.searchByTerm(term: term)
         } catch {
-            searchResults = []
+            return []
         }
     }
     
     @MainActor
-    func parseKnownPodcast(feedUrl: String) async {
-        print("ParseKnown: \(feedUrl)")
+    func parseKnownPodcast(feedUrl: String) async -> RSSChannel? {
         await self.parseRssFeed(feedUrl: feedUrl)
         
         guard let rssChannel = rssChannel else {
             print("Bad parsing")
-            return
+            return nil
         }
         
-        // Then show the sheet
-        await MainActor.run {
-            selectedPodcast = IdentifiablePodcast(rssChannel)
-        }
-    }
-    
-    func subscribeToPodcast() {
-        guard let url = selectedPodcast?.podcast.rssUrl(),
-              let channel = rssChannel
-        else {
-            print("No url or channel found")
-            return
-        }
-        Task { @MainActor in
-            dataManager.subscribeToPodcast(feedUrl: url, channel: channel )
-        }
+        return rssChannel
     }
 }
 

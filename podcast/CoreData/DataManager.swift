@@ -74,17 +74,6 @@ class DataManager: NSObject, ObservableObject {
         self.unlistenedEpisodes = episodeController.fetchedObjects ?? []
         self.podcasts = podcastController.fetchedObjects ?? []
     }
-    
-//    init(persistence: PersistenceManager, downloadManager: DownloadManager) {
-//        self.persistence = persistence
-//        self.downloadManager = downloadManager
-//        super.init()
-//        loadInitialData()
-//        // This is the "Glue" code
-//        self.downloadManager.onDownloadFinished = { [weak self] guid, fileUrl in
-//            self?.handleFinishedDownload(guid: guid, fileUrl: fileUrl)
-//        }
-//    }
         
     func loadInitialData() {
         do {
@@ -154,57 +143,6 @@ class DataManager: NSObject, ObservableObject {
     }
     
     @MainActor
-    func subscribeToPodcast(feedUrl: String, channel: RSSChannel) {
-        let context = persistence.viewContext
-        let podcast = Podcast.create(from: channel, feedUrl: feedUrl, context: context)
-        
-        channel.items.enumerated().forEach { index, episodeItem in
-            let episode = Episode.create(from: episodeItem, context: context)
-            episode.podcast = podcast
-            // So all episodes don't show up on the playlist, mark all as true
-            // Keep most recent episode "unlistened" and add to unlistened episodes
-            if index == 0 {
-                unlistenedEpisodes.append(episode)
-                sortEpisodesByTime()
-                Task {
-                    downloadManager.startDownload(for: episode)
-                    sortEpisodesByTime()
-                }
-            } else {
-                episode.listened = true
-            }
-        }
-        
-        persistence.saveContext()
-        podcasts.append(podcast)
-    }
-    
-    func addNewEpisodes(_ rssEpisodes: [RSSEpisode], to podcast: Podcast) async -> [Episode] {
-        print("📥 Adding \(rssEpisodes.count) episodes to \(podcast.title)")
-        
-        let context = persistence.viewContext
-        
-        var addedEpisodes: [Episode] = []
-        for rssEpisode in rssEpisodes {
-            let episode = Episode.create(from: rssEpisode, context: context)
-            episode.podcast = podcast
-            episode.listened = false
-            addedEpisodes.append(episode)
-        }
-        persistence.saveContext()
-        
-        let beforeCount = await MainActor.run { self.unlistenedEpisodes.count }
-        await MainActor.run {
-            refreshEpisodes()
-        }
-        let afterCount = await MainActor.run { self.unlistenedEpisodes.count }
-        
-        print("🔄 Refresh completed - Before: \(beforeCount), After: \(afterCount)")
-        
-        return addedEpisodes
-    }
-    
-    @MainActor
     func refreshEpisodes() -> Void {
         do {
             unlistenedEpisodes = try loadunlistenedEpisodes()
@@ -253,26 +191,6 @@ extension DataManager {
         return try persistence.viewContext.fetch(podcastRequest)
     }
     
-    func getEpisodesForPodcast(for podcast: Podcast) throws -> [Episode] {
-        let fetchRequest: NSFetchRequest<Episode> = Episode.fetchRequest()
-        fetchRequest.sortDescriptors = [NSSortDescriptor(keyPath: \Episode.publishedDate, ascending: false)]
-        fetchRequest.predicate = NSPredicate(format: "podcast == %@", podcast.objectID)
-        return try persistence.viewContext.fetch(fetchRequest)
-    }
-    
-    // If no settings found, create one
-    func getSettings() -> UserSettings {
-        let request: NSFetchRequest<UserSettings> = UserSettings.fetchRequest()
-        request.sortDescriptors = [NSSortDescriptor(keyPath: \UserSettings.updateTime, ascending: false)]
-        request.fetchLimit = 1
-        guard let settings = try? persistence.viewContext.fetch(request).first else {
-            let settings = UserSettings.create(context: persistence.viewContext)
-            try? persistence.viewContext.save()
-            return settings
-        }
-        print("getting settings: \(settings)")
-        return settings
-    }
 }
 
 // MARK: Data saving/updating functions
@@ -284,35 +202,7 @@ extension DataManager {
         try? persistence.viewContext.save()
         return newEpisode
     }
-    
-    func markAllAsListened(_ podcast: Podcast) {
 
-        // 1. Create the Batch Request
-        let batchRequest = NSBatchUpdateRequest(entityName: "Episode")
-        
-        // 2. Target only this podcast's episodes
-        batchRequest.predicate = NSPredicate(format: "podcast == %@", podcast.objectID)
-        
-        // 3. Set the update dictionary
-        batchRequest.propertiesToUpdate = ["listened": true]
-        batchRequest.resultType = .updatedObjectIDsResultType
-
-        do {
-            let result = try persistence.viewContext.execute(batchRequest) as? NSBatchUpdateResult
-            let objectIDs = result?.result as? [NSManagedObjectID] ?? []
-            
-            // 4. IMPORTANT: Merge the changes back to the UI
-            // Batch updates bypass the context, so we have to tell the UI things changed
-            NSManagedObjectContext.mergeChanges(
-                fromRemoteContextSave: [NSUpdatedObjectsKey: objectIDs],
-                into: [persistence.viewContext]
-            )
-           unlistenedEpisodes = try loadunlistenedEpisodes()
-        } catch {
-            print("Failed to batch update: \(error)")
-        }
-    }
-    
     func markEpisodeAsListened(_ episode: Episode) {
         episode.listened = true
         unlistenedEpisodes.removeAll { listEpisode in

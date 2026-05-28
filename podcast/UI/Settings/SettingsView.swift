@@ -28,12 +28,19 @@ enum SettingsAction: Identifiable {
 }
 
 struct SettingsView: View {
-    @EnvironmentObject private var settingsManager: SettingsManager
     @EnvironmentObject private var themeManager: ThemeManager
     @EnvironmentObject private var downloadManager: DownloadManager
     @State private var activeAction: SettingsAction?
     @State private var errorMessage: String?
     @State private var showError = false
+    
+    @StateObject private var viewModel: SettingsViewModel
+    
+    init(useCase: ManageSettingsUseCase) {
+        self._viewModel = StateObject(wrappedValue: SettingsViewModel(
+            useCase: useCase,
+        ))
+    }
     
     var body: some View {
         List {
@@ -41,8 +48,8 @@ struct SettingsView: View {
                 VStack {
                     LabeledContent("Skip Forward (s)") {}
                         .fontWeight(.light)
-                    Picker("Skip forward", selection: $settingsManager.forwardSkip) {
-                        ForEach(settingsManager.skipOptions, id: \.self) { time in
+                    Picker("Skip forward", selection: $viewModel.forwardSkip) {
+                        ForEach(viewModel.skipOptions, id: \.self) { time in
                             Text("\(time)")
                                 .tag(Int16(time))
                         }
@@ -51,8 +58,8 @@ struct SettingsView: View {
                 VStack{
                     LabeledContent("Skip Backward (s)") {}
                         .fontWeight(.light)
-                    Picker("Skip forward", selection: $settingsManager.backwardSkip) {
-                        ForEach(settingsManager.skipOptions, id: \.self) { time in
+                    Picker("Skip forward", selection: $viewModel.backwardSkip) {
+                        ForEach(viewModel.skipOptions, id: \.self) { time in
                             Text("\(time)")
                                 .tag(Int16(time))
                         }
@@ -61,9 +68,9 @@ struct SettingsView: View {
             }
             .listRowBackground(themeManager.selectedTheme.primaryColor.opacity(0.1))
             Section("Data Management") {
-                Toggle("Allow Downloads on Cellular", isOn: $settingsManager.allowCellularDownloads)
-                Stepper(value: $settingsManager.numDownloads, in: 0...99) {
-                    Text("Keep Last \(settingsManager.numDownloads) Downloads Per Podcast").foregroundStyle(themeManager.selectedTheme.primaryColor)
+                Toggle("Allow Downloads on Cellular", isOn: $viewModel.allowCellularDownloads)
+                Stepper(value: $viewModel.numDownloads, in: 0...99) {
+                    Text("Keep Last \(viewModel.numDownloads) Downloads Per Podcast").foregroundStyle(themeManager.selectedTheme.primaryColor)
                 }
                 Button("Remove Downloads") { activeAction = .deleteDownloads }
                 Button("Clear Library") { activeAction = .clearLibrary }

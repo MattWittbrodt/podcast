@@ -8,17 +8,29 @@
 import SwiftUI
 
 struct PodcastView: View {
+    
+    @StateObject private var viewModel: PodcastViewModel
     let podcast: Podcast
-    @State private var episodes: [Episode] = []
-    @EnvironmentObject private var dataManager: DataManager
-    @EnvironmentObject private var downloadManager: DownloadManager
-    @EnvironmentObject private var playbackManager: PlaybackManager
-    @Binding var showFullPlayer: Bool
+    
+    init(
+        appDependencies: AppDependencies,
+        episodeRepository: EpisodeRepository,
+        podcast: Podcast,
+        showFullPlayer: Binding<Bool>
+    ) {
+        self.podcast = podcast
+        self._viewModel = StateObject(wrappedValue: PodcastViewModel(
+            appDependencies: appDependencies,
+            podcast: podcast,
+            episodeRepository: episodeRepository,
+            showFullPlayer: showFullPlayer
+        ))
+    }
     
     var body: some View {
         Menu("Options") {
             Button("Mark All As Listened", systemImage: "tray.fill") {
-                dataManager.markAllAsListened(podcast)
+                viewModel.markAllListened()
             }
             Button("Share", systemImage: "square.and.arrow.up") {
                 // Handle share
@@ -28,7 +40,7 @@ struct PodcastView: View {
             }
         }
         List {
-            ForEach(episodes, id: \.id) { episode in
+            ForEach(viewModel.episodes, id: \.id) { episode in
                 EpisodeListCard(episode: episode)
                     .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
                     .listRowBackground(Color.clear)
@@ -36,24 +48,21 @@ struct PodcastView: View {
                         swipeActions(for: episode)
                     }
                     .onTapGesture {
-                        handleEpisodeSelection(episode)
+                        viewModel.handleEpisodeSelection(episode)
                     }
             }
         }
-        .onAppear {
-            do {
-                episodes = try self.dataManager.getEpisodesForPodcast(for: podcast)
-            } catch {
-                print("Cannot fetch episodes")
-            }
+        .task {
+            await viewModel.getAllEpisodes()
         }
+        
     }
     
     private func swipeActions(for episode: Episode) -> some View {
         HStack {
             Button(action: {
                 Task {
-                    downloadManager.startDownload(for: episode)
+                    viewModel.startDownloadForEpisode(episode)
                 }}) {
                 Label("Download", systemImage: "square.and.arrow.down.fill")
             }
@@ -61,18 +70,11 @@ struct PodcastView: View {
             
             Button(action: {
                 Task {
-                    dataManager.markEpisodeAsUnlistened(episode)
+                    viewModel.markEpisodeAsUnlistened(episode)
                 }}) {
                 Label("Mark as Unlistened", systemImage: "circle.fill")
             }
                 .tint(.blue)
-        }
-    }
-    
-    private func handleEpisodeSelection(_ episode: Episode) {
-        Task { @MainActor in
-            showFullPlayer = true
-            playbackManager.startPlayingEpisode(episode: episode)
         }
     }
 }

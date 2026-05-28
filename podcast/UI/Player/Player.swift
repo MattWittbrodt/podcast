@@ -52,8 +52,15 @@ struct PlayerMenu: View {
 struct PlayerControlsView: View {
     @EnvironmentObject var playbackManager: PlaybackManager
     @EnvironmentObject var themeManager: ThemeManager
-    @EnvironmentObject var settingsManager: SettingsManager
     @State private var isEditing = false
+    
+    let forwardSkip: Int64
+    let backwardSkip: Int64
+    
+    init(backwardSkip: Int64, forwardSkip: Int64) {
+        self.backwardSkip = backwardSkip
+        self.forwardSkip = forwardSkip
+    }
     
     var body: some View {
         VStack {
@@ -85,8 +92,8 @@ struct PlayerControlsView: View {
             .padding(.bottom, 20)
             
             HStack {
-                Button(action: { playbackManager.skipBackward(seconds: Int64(settingsManager.settings.backwardSkip)) }) {
-                    Image(systemName: "gobackward.\(settingsManager.settings.backwardSkip)")
+                Button(action: { playbackManager.skipBackward(seconds: backwardSkip) }) {
+                    Image(systemName: "gobackward.\(backwardSkip)")
                         .resizable()
                         .frame(width: 40, height: 45 )
                 }
@@ -97,8 +104,8 @@ struct PlayerControlsView: View {
                         .frame(width: 35, height: 45 )
                 }
                 Spacer()
-                Button(action: { playbackManager.skipForward(seconds: Int64(settingsManager.settings.forwardSkip)) }) {
-                    Image(systemName: "goforward.\(settingsManager.settings.forwardSkip)")
+                Button(action: { playbackManager.skipForward(seconds: forwardSkip) }) {
+                    Image(systemName: "goforward.\(forwardSkip)")
                         .resizable()
                         .frame(width: 40, height: 45 )
                 }
@@ -160,9 +167,15 @@ struct AirPlayButton: UIViewRepresentable {
 struct Player: View {
     @EnvironmentObject var themeManager: ThemeManager
     @EnvironmentObject var playbackManager: PlaybackManager
-    @EnvironmentObject var settingsManager: SettingsManager
+    @StateObject var viewModel: PlayerViewModel
     
     @State var showEpisodeNotes: Bool = false
+        
+    init(showFullPlayer: Binding<Bool>, manageSettingsUseCase: ManageSettingsUseCase) {
+        self._viewModel = StateObject(wrappedValue: PlayerViewModel(
+            useCase: manageSettingsUseCase,
+        ))
+    }
         
     var body: some View {
         Color(themeManager.selectedTheme.secondoryColor)
@@ -198,7 +211,10 @@ struct Player: View {
                     // Player controls
                     Spacer()
                     VStack{
-                        PlayerControlsView()
+                        PlayerControlsView(
+                            backwardSkip: Int64(viewModel.backwardSkip),
+                            forwardSkip: Int64(viewModel.forwardSkip)
+                        )
                             .padding([.leading, .trailing], 30)
                             .foregroundStyle(Color(themeManager.selectedTheme.primaryColor))
                         PlayerOptionsView(showDescription: $showEpisodeNotes)

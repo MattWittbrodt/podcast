@@ -29,4 +29,8 @@ struct IdentifiablePodcast: Identifiable {
     init(_ podcast: any PresentationPodcast) {
         self.podcast = podcast
     }
+    
+    func imageLink() -> String {
+        podcast.imageLink()
+    }
 }

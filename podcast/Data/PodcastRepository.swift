@@ -6,8 +6,14 @@
 //
 import CoreData
 
-struct PodcastRepository {
-    let dataManager: DataManager
+class PodcastRepository {
+    private let dataManager: DataManager
+    private let context: NSManagedObjectContext
+
+    init(dataManager: DataManager, context: NSManagedObjectContext) {
+        self.dataManager = dataManager
+        self.context = context
+    }
     
     @MainActor func getObjectFromId(for podcastID: NSManagedObjectID) -> Podcast? {
         return try? dataManager.persistence.viewContext.existingObject(with: podcastID) as? Podcast
@@ -63,7 +69,6 @@ struct PodcastRepository {
         
         let existingGuids = Set(podcast.episodesArray.map { $0.guid })
         let filtered = items.filter { !existingGuids.contains($0.guid) }
-        print("for \(podcast.title): \(filtered.count)")
         return filtered
     }
     
@@ -71,6 +76,11 @@ struct PodcastRepository {
     @MainActor
     func getAllSubscribedPodcasts() -> [Podcast] {
         return self.dataManager.podcasts
+    }
+    
+    // Creates a podcast from an RSS version
+    func createPodcastFromWeb(channel: RSSChannel, feedUrl: String) -> Podcast {
+        return Podcast.create(from: channel, feedUrl: feedUrl, context: context)
     }
 }
 
