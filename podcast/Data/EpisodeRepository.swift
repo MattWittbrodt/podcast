@@ -6,12 +6,28 @@
 //
 import CoreData
 
-struct EpisodeRepository {
+class EpisodeRepository {
     let dataManager: DataManager
+    private let context: NSManagedObjectContext
+
+    init(dataManager: DataManager, context: NSManagedObjectContext) {
+        self.dataManager = dataManager
+        self.context = context
+    }
+    
+    private func save() {
+        guard context.hasChanges else { return }
+        do {
+            try context.save()
+        } catch {
+            print("Repo Save Error: \(error)")
+            context.rollback()
+        }
+    }
     
     @MainActor
     func getEpisode(for id: NSManagedObjectID) -> Episode? {
-        return try? dataManager.persistence.viewContext.existingObject(with: id) as? Episode
+        return try? context.existingObject(with: id) as? Episode
     }
     
     @MainActor func getRecentEpisodesForEachPodcast(limit: Int) -> [Episode] {
@@ -49,7 +65,7 @@ struct EpisodeRepository {
         
         Task.detached {
             // Create a new, private context for this single transaction
-            let backgroundContext = await dataManager.persistence.container.newBackgroundContext()
+            let backgroundContext = await self.dataManager.persistence.container.newBackgroundContext()
             
             let needsUpdate = try await backgroundContext.perform {
                 guard let episodeInContext = backgroundContext.object(with: episodeID) as? Episode else {
@@ -80,6 +96,120 @@ struct EpisodeRepository {
                 try backgroundContext.save()
                 print("Successfully saved new chapters for: \(episodeInContext.title ?? "title missing")")
             }
+        }
+    }
+    
+    // Marks and episode as manually downloaded by user
+    func markAsManuallyDownloaded(_ episode: Episode) {
+        context.perform {
+            episode.manualDownload = true
+        }
+        save()
+    }
+    
+    // Marks and episode as listened
+    func markEpisodeAsListened(_ episode: Episode) {
+        context.perform {
+            episode.listened = true
+        }
+        save()
+    }
+    
+    // Marks and episode as unlistened
+    func markEpisodeAsUnlistened(_ episode: Episode) {
+        context.perform {
+            episode.listened = false
+            episode.lastListened = 0
+        }
+        save()
+    }
+    
+    // Updating the episode duration if the file exists
+    func updateDurationFromFile(for episode: Episode, length: Int16) async {
+        
+        await context.perform {
+            // Assuming your Core Data attribute is named 'fileLength' or similar
+            episode.duration = length
+            
+            // Persist the change
+            guard self.context.hasChanges else { return }
+            try? self.context.save()
+        }
+    }
+    
+    // Gets all episodes for a specific podcast
+    func getAllEpisodesForPodcast(_ podcast: Podcast) async throws -> [Episode] {
+        let objectID = podcast.objectID
+        
+        return try await context.perform {
+            guard let podcastOnThisThread = self.context.object(with: objectID) as? Podcast else {
+                return []
+            }
+            
+            let fetchRequest: NSFetchRequest<Episode> = Episode.fetchRequest()
+            fetchRequest.sortDescriptors = [NSSortDescriptor(keyPath: \Episode.publishedDate, ascending: false)]
+            fetchRequest.predicate = NSPredicate(format: "podcast == %@", podcastOnThisThread)
+            
+            return try self.context.fetch(fetchRequest)
+        }
+    }
+    
+    // Marks all episodes as listened for a podcast
+    @MainActor
+    func markAllEpisodesAsListened(for podcast: Podcast) {
+
+        // 1. Create the Batch Request
+        let batchRequest = NSBatchUpdateRequest(entityName: "Episode")
+        
+        // 2. Target only this podcast's episodes
+        batchRequest.predicate = NSPredicate(format: "podcast == %@", podcast.objectID)
+        
+        // 3. Set the update dictionary
+        batchRequest.propertiesToUpdate = ["listened": true]
+        batchRequest.resultType = .updatedObjectIDsResultType
+
+        do {
+            let result = try context.execute(batchRequest) as? NSBatchUpdateResult
+            let objectIDs = result?.result as? [NSManagedObjectID] ?? []
+            
+            NSManagedObjectContext.mergeChanges(
+                fromRemoteContextSave: [NSUpdatedObjectsKey: objectIDs],
+                into: [context]
+            )
+        } catch {
+            print("Failed to batch update: \(error)")
+        }
+    }
+    
+    // Imports episodes to a podcast
+    func importEpisodes(from channel: RSSChannel, for podcastID: NSManagedObjectID) async throws -> Episode? {
+        
+        return try await context.perform {
+            guard let podcast = try self.context.existingObject(with: podcastID) as? Podcast else {
+                return nil
+            }
+            
+            var firstEpisode: Episode?
+            
+            for (index, item) in channel.items.enumerated() {
+                let episode = Episode.create(from: item, context: self.context)
+                episode.podcast = podcast
+                
+                // Default behavior is to treat the first episode as unlistened when subscribing
+                if index == 0 {
+                    episode.listened = false
+                    firstEpisode = episode
+                } else {
+                    episode.listened = true
+                }
+            }
+            
+            // Save the whole batch at once
+            if self.context.hasChanges {
+                try self.context.save()
+            }
+            
+            return firstEpisode
         }
     }
     

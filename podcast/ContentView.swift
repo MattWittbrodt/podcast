@@ -20,33 +20,46 @@ struct ContentView: View {
     @StateObject var dataManager: DataManager
     @StateObject var feedService: PodcastFeedService
     @StateObject var playbackManager: PlaybackManager
-    @StateObject var settingsManager: SettingsManager
+    //@StateObject var settings: SettingsManager
     var useCaseProvider: UseCaseProvider
+    
+    let appDependencies: AppDependencies
     
     var body: some View {
         ZStack(alignment: .bottom) {
             TabView {
                 Tab("Home", systemImage: "house") {
-                    RecentEpisodesList(updateEpisodes: useCaseProvider.makeRefreshLibraryUseCase().execute,
-                                       showFullPlayer: $showFullPlayer)
+                    RecentEpisodesList(
+                        dataManager: dataManager,
+                        downloadManager: downloadManager,
+                        refreshLibraryUseCase: useCaseProvider.makeRefreshLibraryUseCase(),
+                        processManualDownloadUseCase: useCaseProvider.makeProcessManualDownloadUseCase(),
+                        finishEpisodeUseCase: useCaseProvider.makeFinishEpisodeUseCase(),
+                        showFullPlayer: $showFullPlayer,
+                        playbackManager: playbackManager
+                    )
                     .environmentObject(themeManager)
                     .toolbar(.visible, for: .tabBar)
                     .toolbarBackground(.visible, for: .tabBar) //<- here
                 }
                 Tab("Podcasts", systemImage: "books.vertical") {
-                    PodcastList(showFullPlayer: $showFullPlayer)
+                    PodcastList(
+                        appDependencies: appDependencies,
+                        episodeRepository: useCaseProvider.episodeRepository,
+                        showFullPlayer: $showFullPlayer)
                         .toolbar(.visible, for: .tabBar)
                         .toolbarBackground(.visible, for: .tabBar) //<- here
                 }
                 Tab("Discover", systemImage: "magnifyingglass") {
-                    SearcherView()
-                        .environmentObject(themeManager)
-                        .environmentObject(discoveryManager)
-                        .toolbar(.visible, for: .tabBar)
-                        .toolbarBackground(.visible, for: .tabBar)
+                    SearcherView(
+                        appDependencies: appDependencies,
+                        useCase: useCaseProvider.makeSubscribeToPodcastUseCase()
+                    )
+                    .toolbar(.visible, for: .tabBar)
+                    .toolbarBackground(.visible, for: .tabBar)
                 }
                 Tab("Settings", systemImage: "gear") {
-                    SettingsView()
+                    SettingsView(useCase: useCaseProvider.makeManageSettingsUseCase())
                        .toolbar(.visible, for: .tabBar)
                        .toolbarBackground(.visible, for: .tabBar) //<- here
                 }
@@ -66,13 +79,15 @@ struct ContentView: View {
             .environmentObject(playbackManager)
             .environmentObject(downloadManager)
             .environmentObject(themeManager)
-            .environmentObject(settingsManager)
+            //.environmentObject(settingsManager)
             .accentColor(Color(themeManager.selectedTheme.primaryColor))
             
             if playbackManager.currentEpisode != nil {
-                MiniPlayerView(showFullPlayer: $showFullPlayer)
+                MiniPlayerView(
+                    showFullPlayer: $showFullPlayer,
+                    useCase: useCaseProvider.makeManageSettingsUseCase()
+                )
                     .environmentObject(playbackManager)
-                    .environmentObject(settingsManager)
                     .transition(.move(edge: .bottom))
                     .zIndex(1)
                     .padding(.bottom, UIApplication.shared.windows.first?.safeAreaInsets.bottom == 0 ? 20 : 0)
@@ -81,10 +96,13 @@ struct ContentView: View {
         }
         .ignoresSafeArea(edges: .bottom)
         .sheet(isPresented: $showFullPlayer) {
-            Player()
+            Player(
+                showFullPlayer: $showFullPlayer,
+                manageSettingsUseCase: useCaseProvider.makeManageSettingsUseCase()
+            )
                 .environmentObject(playbackManager)
                 .environmentObject(themeManager)
-                .environmentObject(settingsManager)
+                //.environmentObject(settingsManager)
                 .presentationDragIndicator(.visible)
         }
         .onChange(of: scenePhase) { oldValue, newValue in

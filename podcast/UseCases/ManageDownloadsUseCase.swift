@@ -17,6 +17,10 @@ struct ManageDownloadsUseCase {
         // Start auto-downloads
         for episode in episodesToKeep {
             downloadManager.startDownload(for: episode)
+            
+            if let actualLength = await downloadManager.getActualFileLength(for: episode), actualLength != episode.duration {
+                await repository.updateDurationFromFile(for: episode, length: actualLength)
+            }
         }
 
         // Cleanup episodes that should not be saved on device

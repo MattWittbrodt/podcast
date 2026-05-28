@@ -13,7 +13,7 @@ import MediaPlayer
 class PlaybackManager: ObservableObject {
     private let downloadManager: DownloadManager
     private let dataManager: DataManager
-    private var settingsManager: SettingsManager
+    private var settingsRepository: SettingsRepository
     private let saveFrequency: TimeInterval = 5
     
     // MARK: - Published Properties
@@ -36,10 +36,10 @@ class PlaybackManager: ObservableObject {
     private var timeObserver: Any?
     private var playlistEpisodes: [Episode] = []
     
-    init(downloadManager: DownloadManager, dataManager: DataManager, settingsManager: SettingsManager) {
+    init(downloadManager: DownloadManager, dataManager: DataManager, settingsRepository: SettingsRepository) {
         self.downloadManager = downloadManager
         self.dataManager = dataManager
-        self.settingsManager = settingsManager
+        self.settingsRepository = settingsRepository
         setupAudioSession()
         setupCombineSubscribers()
     }
@@ -313,17 +313,17 @@ extension PlaybackManager {
             return .success
         }
         
-        commandCenter.skipBackwardCommand.preferredIntervals = [NSNumber(value: settingsManager.backwardSkip)]
+        commandCenter.skipBackwardCommand.preferredIntervals = [NSNumber(value: settingsRepository.settings.backwardSkip)]
         commandCenter.skipBackwardCommand.isEnabled = true
         commandCenter.skipBackwardCommand.addTarget { [weak self] _ in
-            self?.skipBackward(seconds: Int64(self?.settingsManager.backwardSkip ?? 30))
+            self?.skipBackward(seconds: Int64(self?.settingsRepository.settings.backwardSkip ?? 30))
             return .success
         }
         
-        commandCenter.skipForwardCommand.preferredIntervals = [NSNumber(value: settingsManager.forwardSkip)]
+        commandCenter.skipForwardCommand.preferredIntervals = [NSNumber(value: settingsRepository.settings.forwardSkip)]
         commandCenter.skipForwardCommand.isEnabled = true
         commandCenter.skipForwardCommand.addTarget { [weak self] _ in
-            self?.skipForward(seconds: Int64(self?.settingsManager.forwardSkip ?? 30))
+            self?.skipForward(seconds: Int64(self?.settingsRepository.settings.forwardSkip ?? 30))
             return .success
         }
         

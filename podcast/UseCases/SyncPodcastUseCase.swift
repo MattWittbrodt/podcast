@@ -17,7 +17,7 @@ struct SyncPodcastUseCase {
         
         // 1. Get the string safely on the Main Actor
         let feedUrlString = await MainActor.run { () -> String? in
-            return repository.getObjectFromId(for: podcastId)?.feedUrl
+            return repository.getObjectFromId(for: podcastId)?.feedUrl?.upgradeToHTTPS
         }
 
         // 2. Validate and convert outside the closure

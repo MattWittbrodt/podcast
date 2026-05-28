@@ -171,6 +171,27 @@ extension DownloadManager {
             }
         }
     }
+    
+    // Finds actual download length (vs whats in RSS)
+    func getActualFileLength(for episode: Episode) async -> Int16? {
+        guard let episodePath = self.generateStoreFilePath(for: episode.savedFileName()) else {
+            return nil
+        }
+        
+        let asset = AVURLAsset(url: episodePath)
+        do {
+            let durationCMTime = try await asset.load(.duration)
+            let durationSeconds = CMTimeGetSeconds(durationCMTime)
+            
+            if durationSeconds.isFinite {
+                return Int16(durationSeconds)
+            }
+        } catch {
+            print("Error loading asset duration for Planecast: \(error)")
+        }
+        
+        return nil
+    }
 }
 
 // MARK: UrlSessionMethods

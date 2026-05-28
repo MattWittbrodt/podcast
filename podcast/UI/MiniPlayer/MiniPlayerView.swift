@@ -9,8 +9,16 @@ import SwiftUI
 
 struct MiniPlayerView: View {
     @EnvironmentObject var playbackManager: PlaybackManager
-    @EnvironmentObject var settingsManager: SettingsManager
+    //@EnvironmentObject var settingsManager: SettingsManager
     @Binding var showFullPlayer: Bool
+    @StateObject private var viewModel: MiniPlayerViewModel
+    
+    init(showFullPlayer: Binding<Bool>, useCase: ManageSettingsUseCase) {
+        self._showFullPlayer = showFullPlayer
+        self._viewModel = StateObject(wrappedValue: MiniPlayerViewModel(
+            useCase: useCase,
+        ))
+    }
     
     var body: some View {
         if let episode = playbackManager.currentEpisode {
@@ -50,10 +58,10 @@ struct MiniPlayerView: View {
                     }
                     
                     Button(action: {
-                        playbackManager.skipForward(seconds: Int64(settingsManager.settings.forwardSkip))
+                        playbackManager.skipForward(seconds: Int64(viewModel.forwardSkip))
                     })
                     {
-                        Image(systemName: "\(settingsManager.settings.forwardSkip).arrow.trianglehead.clockwise")
+                        Image(systemName: "\(viewModel.forwardSkip).arrow.trianglehead.clockwise")
                             .imageScale(.large)
                             .fontWeight(.semibold)
                     }

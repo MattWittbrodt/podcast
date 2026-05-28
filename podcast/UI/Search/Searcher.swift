@@ -8,15 +8,24 @@ import SwiftUI
 import CoreData
 
 struct SearcherView: View {
-    @EnvironmentObject private var discoveryManager: DiscoveryManager
+    @StateObject private var viewModel: SearcherViewModel
     @EnvironmentObject private var themeManager: ThemeManager
     
-    @State private var enteredText = ""
+    private let subscribeUseCase: SubscribeToPodcastUseCase
+    
+    //@State private var enteredText = ""
     @State private var showAlert = false
     @State private var alertMessage = ""
     
     @State private var showTextField = false
     @State private var rssAdditionText = ""
+    
+    init(appDependencies: AppDependencies, useCase: SubscribeToPodcastUseCase) {
+        self._viewModel = StateObject(wrappedValue: SearcherViewModel(
+            appDependencies: appDependencies,
+        ))
+        self.subscribeUseCase = useCase
+    }
         
     var body: some View {
         content
@@ -86,7 +95,7 @@ struct SearcherView: View {
             Button("Search") {
                 withAnimation {
                     Task {
-                        await discoveryManager.parseKnownPodcast(feedUrl: rssAdditionText)
+                        await viewModel.parseRSSfeedIntoPodcast(rssAdditionText)
                     }
                     showTextField = false
                 }
@@ -106,18 +115,13 @@ struct SearcherView: View {
     }
     
     private var searchField: some View {
-        TextField(text: $enteredText) {
+        TextField(text: $viewModel.enteredText) {
             Text("Search for Podcasts")
                 .foregroundColor(themeManager.selectedTheme.textInputColor.opacity(0.4))
         }
         .fontWeight(.semibold)
         .padding(.horizontal, 8)
         .padding(.vertical, 8)
-        .onChange(of: enteredText) {
-            Task {
-                await discoveryManager.search(term: enteredText)
-            }
-        }
         .background(
             RoundedRectangle(cornerRadius: 2) // Adjust corner radius as needed
                 .fill(.white) // Background color
@@ -132,10 +136,10 @@ struct SearcherView: View {
     }
     
     private var searchResultsList: some View {
-        List(discoveryManager.searchResults) { searchResult in
+        List(viewModel.searchResults) { searchResult in
             PodcastRow(searchResult: searchResult) {
                 Task {
-                    await handleItemSelection(searchResult)
+                    await viewModel.parseRSSfeedIntoPodcast(searchResult.rssUrl())
                 }
             }
             .background(themeManager.selectedTheme.secondoryColor)
@@ -144,18 +148,13 @@ struct SearcherView: View {
             .listRowBackground(Color.clear)
         }
         .listStyle(.plain)
-    
-        .sheet(item: $discoveryManager.selectedPodcast) { _ in
-            PodcastDiscoverView()
-                .environmentObject(discoveryManager)
+        .sheet(item: $viewModel.selectedPodcast) { podcast in
+            PodcastDiscoverView(
+                podcastDetail: podcast,
+                useCase: subscribeUseCase
+            )
         }
     }
-    
-    private func handleItemSelection(_ item: PodcastIndexInfo) async {
-        // Perform your operation first
-        await discoveryManager.parseKnownPodcast(feedUrl: item.rssUrl())
-    }
-    
 }
 
 // Extracted subview for better organization

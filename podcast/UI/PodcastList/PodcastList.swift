@@ -8,10 +8,24 @@
 import SwiftUI
 
 struct PodcastList: View {
+    @StateObject private var viewModel: PodcastListViewModel
     @EnvironmentObject private var themeManager: ThemeManager
-    @EnvironmentObject private var dataManager: DataManager
-    @EnvironmentObject private var downloadManager: DownloadManager
     @Binding var showFullPlayer: Bool
+    
+    private let appDependencies: AppDependencies
+    private let episodeRepository: EpisodeRepository
+    
+    init(appDependencies: AppDependencies, episodeRepository: EpisodeRepository, showFullPlayer: Binding<Bool>) {
+        
+        self.appDependencies = appDependencies
+        self.episodeRepository = episodeRepository
+        
+        self._showFullPlayer = showFullPlayer
+                
+        self._viewModel = StateObject(wrappedValue: PodcastListViewModel(
+            appDependencies: appDependencies,
+        ))
+    }
         
     var body: some View {
         NavigationStack{
@@ -32,41 +46,37 @@ struct PodcastList: View {
     
     private func podcastList(in geometry: GeometryProxy) -> some View {
         List {
-            podcastListContent()
+            ForEach(viewModel.podcasts, id: \.id) { podcast in
+                NavigationLink {
+                   PodcastView(
+                        appDependencies: appDependencies,
+                        episodeRepository: episodeRepository,
+                        podcast: podcast,
+                        showFullPlayer: $showFullPlayer,
+                   )
+                } label: {
+                    PodcastListCard(
+                        title: podcast.title,
+                        author: podcast.author,
+                        image: podcast.imageUrl ?? ""
+                    )
+                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                        swipeActions(for: podcast)
+                    }
+                }
+                .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
+                .listRowBackground(Color.clear)
+            }
         }
         .listStyle(.plain)
         .background(themeManager.selectedTheme.secondoryColor)
         .scrollContentBackground(.hidden)
     }
     
-    private func podcastListContent() -> some View {
-        ForEach(dataManager.podcasts, id: \.id) { podcast in
-            NavigationLink {
-               PodcastView(podcast: podcast, showFullPlayer: $showFullPlayer)
-            } label: {
-                PodcastListCard(
-                    title: podcast.title,
-                    author: podcast.author,
-                    image: podcast.imageUrl ?? ""
-                )
-                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                    swipeActions(for: podcast)
-                }
-            }
-            .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
-            .listRowBackground(Color.clear)
-        }
-    }
-    
     private func swipeActions(for podcast: Podcast) -> some View {
         HStack {
             Button(action: {
-                Task { @MainActor in
-                    Podcast.delete(podcast: podcast)
-                    self.dataManager.saveMainContext()
-                    self.dataManager.refreshEpisodes()
-                    self.dataManager.refreshPodcasts()
-                }
+                viewModel.unsuscribeFromPodcast(podcast)
             }) {
                 Label("Unsuscribe", systemImage: "tray.fill")
             }
