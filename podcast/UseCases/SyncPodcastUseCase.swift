@@ -13,7 +13,7 @@ struct SyncPodcastUseCase {
     let imageService: ImageService
     let repository: PodcastRepository
 
-    func execute(for podcastId: NSManagedObjectID ) async {
+    func execute(for podcastId: NSManagedObjectID, notifyUser: Bool) async {
         
         // 1. Get the string safely on the Main Actor
         let feedUrlString = await MainActor.run { () -> String? in
@@ -26,7 +26,7 @@ struct SyncPodcastUseCase {
         do {
             // 1. Fetch raw data (The Service just returns a 'Channel' struct)
             let channel = try await feedService.fetchChannel(for: url)
-            
+                        
             // 2. Filter to find only new episodes
             // We do this on the MainActor because we are reading the podcast's episodes
             let newItems = await MainActor.run {
@@ -43,6 +43,13 @@ struct SyncPodcastUseCase {
             await MainActor.run {
                 repository.updatePodcastRecord(podcastId, channel: channel, image: podcastImage)
                 repository.saveNewEpisodes(episodesWithImages, to: podcastId)
+            }
+            
+            // After finishing - notify user
+            if notifyUser {
+                for epInfo in newItems {
+                    sendNotification(message: "\(epInfo.episodeTitle)", title: "Now Available: \(channel.title)")
+                }
             }
         } catch {
             print("Sync failed: \(error)")

@@ -33,7 +33,7 @@ struct ContentViewFactory {
         let playbackManager = PlaybackManager(
             downloadManager: downloadManager,
             dataManager: dataManager,
-            settingsRepository: settingsRepositry
+            settingsRepository: settingsRepositry,
         )
         
         // 3. Create the UseCaseProvider (The Logic Hub)
@@ -44,6 +44,8 @@ struct ContentViewFactory {
             settingsRepository: settingsRepositry,
             playbackManager: playbackManager
         )
+        
+        BackgroundTaskManager.shared.refreshLibraryUseCase = useCaseProvider.makeRefreshLibraryUseCase()
         
         downloadManager.allowCellularDownloads = { settingsRepositry.settings.allowCellularDownloads }
         
@@ -76,11 +78,22 @@ struct PodcastApp: App {
         setupSharedDirectory()
         UserDefaults.standard.set(0, forKey: "com.apple.CoreData.SQLDebug")
         UserDefaults.standard.set(0, forKey: "com.apple.CoreData.ConcurrencyDebug")
+        BackgroundTaskManager.shared.registerBackgroundTask()
     }
     
     var body: some Scene {
         WindowGroup {
             ContentViewFactory.makeContentView()
+                .onAppear {
+                    // Ask for permission the first time they open the app
+                    requestNotificationPermissions()
+                }
+        }
+        .onChange(of: scenePhase) { oldPhase, newPhase in
+            if newPhase == .background {
+                // 3. Schedule the task as the user leaves the app
+                BackgroundTaskManager.shared.scheduleAppRefresh()
+            }
         }
     }
 }

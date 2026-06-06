@@ -28,7 +28,7 @@ struct ManageDownloadsUseCase {
         let allUnlistened = await repository.getAllUnlistenedEpisodes()
         for episode in allUnlistened {
             if !episodesToKeep.contains(episode) && !episode.manualDownload {
-                downloadManager.removeDownload(for: episode)
+                downloadManager.removeDownload(for: episode.savedFileName(), id: episode.objectID)
             }
         }
     }

@@ -67,11 +67,12 @@ class UseCaseProvider {
         )
     }
     
-    func makeFinishEpisodeUseCase() -> FinishEpisodeUseCase {
-        return FinishEpisodeUseCase(
-            playbackManager: playbackManager,
+    func makeSetEpisodeAsListenedUseCase() -> SetEpisodeAsListenedUseCase {
+        return SetEpisodeAsListenedUseCase(
             downloadManager: downloadManager,
             episodeRepository: episodeRepository,
+            startPlayingEpisodeUseCase: self.makeStartPlayingEpisodeUseCase(),
+            playbackManager: playbackManager
         )
     }
     
@@ -86,6 +87,14 @@ class UseCaseProvider {
     func makeManageSettingsUseCase() -> ManageSettingsUseCase {
         return ManageSettingsUseCase(
             repository: settingsRepository
+        )
+    }
+    
+    func makeStartPlayingEpisodeUseCase() -> StartPlayingEpisodeUseCase {
+        return StartPlayingEpisodeUseCase(
+            playbackManager: playbackManager,
+            downloadManager: downloadManager,
+            episodeRepository: episodeRepository
         )
     }
 }

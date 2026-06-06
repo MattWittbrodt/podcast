@@ -34,7 +34,8 @@ struct ContentView: View {
                         downloadManager: downloadManager,
                         refreshLibraryUseCase: useCaseProvider.makeRefreshLibraryUseCase(),
                         processManualDownloadUseCase: useCaseProvider.makeProcessManualDownloadUseCase(),
-                        finishEpisodeUseCase: useCaseProvider.makeFinishEpisodeUseCase(),
+                        setEpisodeAsListenedUseCase: useCaseProvider.makeSetEpisodeAsListenedUseCase(),
+                        startPlayingEpisodeUseCase: useCaseProvider.makeStartPlayingEpisodeUseCase(),
                         showFullPlayer: $showFullPlayer,
                         playbackManager: playbackManager
                     )
@@ -46,6 +47,7 @@ struct ContentView: View {
                     PodcastList(
                         appDependencies: appDependencies,
                         episodeRepository: useCaseProvider.episodeRepository,
+                        startPlayingEpisodeUseCase: useCaseProvider.makeStartPlayingEpisodeUseCase(),
                         showFullPlayer: $showFullPlayer)
                         .toolbar(.visible, for: .tabBar)
                         .toolbarBackground(.visible, for: .tabBar) //<- here
@@ -108,7 +110,7 @@ struct ContentView: View {
         .onChange(of: scenePhase) { oldValue, newValue in
             if newValue == .active {
                 Task {
-                    await useCaseProvider.makeRefreshLibraryUseCase().execute()
+                    await useCaseProvider.makeRefreshLibraryUseCase().execute(notifyUser: false)
                 }
             }
         }

@@ -16,6 +16,9 @@ class PlaybackManager: ObservableObject {
     private var settingsRepository: SettingsRepository
     private let saveFrequency: TimeInterval = 5
     
+    // Hook to allow Use Cases to listen for the end event
+    var onEpisodeEnded: (() -> Void)?
+    
     // MARK: - Published Properties
     @Published var currentEpisode: Episode?
     @Published var playbackState: PlaybackState = .stopped
@@ -34,7 +37,6 @@ class PlaybackManager: ObservableObject {
     // MARK: - Private Properties
     var player: AVPlayer?
     private var timeObserver: Any?
-    private var playlistEpisodes: [Episode] = []
     
     init(downloadManager: DownloadManager, dataManager: DataManager, settingsRepository: SettingsRepository) {
         self.downloadManager = downloadManager
@@ -65,50 +67,30 @@ class PlaybackManager: ObservableObject {
     }
     
     // Function to handle end of episode procedures
-    func handleEpisodeEnd() {
-        // Mark episode as listened
-        guard let currentEpisode = self.currentEpisode else { return }
-        dataManager.markEpisodeAsListened(currentEpisode)
-        
-        if !playlistEpisodes.isEmpty {
-            let nextEpisode = playlistEpisodes.removeFirst()
-            startPlayingEpisode(episode: nextEpisode)
-        }
-    }
+//    func handleEpisodeEnd() {
+//        if !playlistEpisodes.isEmpty {
+//            let nextEpisode = playlistEpisodes.removeFirst()
+//            startPlayingEpisode(episode: nextEpisode)
+//        }
+//    }
     
     // Function to handle the 'playlist' functionality
-    func loadEpisodeAndPlaylist(episode: Episode, playlist: [Episode]) {
-        if let currentEpisodeIndex = playlist.firstIndex(where: {$0.objectID == episode.objectID}) {
-            // stores shrunken array of episodes to be played
-            let indexWithoutEpisode = currentEpisodeIndex + 1
-            playlistEpisodes = Array(playlist[indexWithoutEpisode...])
-        }
-        startPlayingEpisode(episode: episode)
-    }
+//    func loadEpisodeAndPlaylist(episode: Episode, playlist: [Episode]) {
+//        if let currentEpisodeIndex = playlist.firstIndex(where: {$0.objectID == episode.objectID}) {
+//            // stores shrunken array of episodes to be played
+//            let indexWithoutEpisode = currentEpisodeIndex + 1
+//            playlistEpisodes = Array(playlist[indexWithoutEpisode...])
+//        }
+//        startPlayingEpisode(episode: episode)
+//    }
     
-    func startPlayingEpisode(episode: Episode) {
+    func startPlayback(episode: Episode, location: URL) {
         self.cleanupPlayer()
-        
-        var urlToPlay: URL? = nil
-        
-        if let localPath = downloadManager.getFullDownloadPath(for: episode),
-           downloadManager.downloadFileExists(for: episode) {
-            urlToPlay = localPath
-        } else if let remoteURLString = episode.enclosureUrl,
-                 let remoteURL = URL(string: remoteURLString) {
-            urlToPlay = remoteURL
-        } else {
-            return
-        }
-        
-        guard let finalUrl = urlToPlay else {
-            return
-        }
         
         currentEpisode = episode
         duration = Double(episode.duration)
         
-        let playerItem = AVPlayerItem(url: finalUrl)
+        let playerItem = AVPlayerItem(url: location)
         player = AVPlayer(playerItem: playerItem)
         self.seek(to: episode.lastListened)
         self.playbackRate = currentEpisode?.podcast?.playbackRate ?? 1.0
@@ -142,6 +124,7 @@ class PlaybackManager: ObservableObject {
         player = nil
         currentEpisodeImage = nil
     }
+
 }
 
 // MARK: Manage Playback Directly
@@ -266,7 +249,8 @@ extension PlaybackManager {
                 
                 // Look for end of episode and handle appropriately
                 if currentEpisode.duration - Int16(time.seconds) < 1 {
-                    self?.handleEpisodeEnd()
+//                    self?.handleEpisodeEnd()
+                    self?.onEpisodeEnded?()
                 }
             }
         }

@@ -20,7 +20,8 @@ class RecentEpisodesViewModel: ObservableObject {
     private let playbackManager: PlaybackManager
     private let refreshLibraryUseCase: RefreshLibraryUseCase
     private let manualDownloadUseCase: ProcessManualDownloadUseCase
-    private let finishEpisodeUseCase: FinishEpisodeUseCase
+    private let setEpisodeAsListenedUseCase: SetEpisodeAsListenedUseCase
+    private let startPlayingEpisodeUseCase: StartPlayingEpisodeUseCase
     
     private var cancellables = Set<AnyCancellable>()
     
@@ -31,7 +32,8 @@ class RecentEpisodesViewModel: ObservableObject {
         downloadManager: DownloadManager,
         refreshLibraryUseCase: RefreshLibraryUseCase,
         processManualDownloadUseCase: ProcessManualDownloadUseCase,
-        finishEpisodeUseCase: FinishEpisodeUseCase,
+        setEpisodeAsListenedUseCase: SetEpisodeAsListenedUseCase,
+        startPlayingEpisodeUseCase: StartPlayingEpisodeUseCase,
         showFullPlayer: Binding<Bool>,
         playbackManager: PlaybackManager
     ) {
@@ -39,7 +41,8 @@ class RecentEpisodesViewModel: ObservableObject {
         self.downloadManager = downloadManager
         self.refreshLibraryUseCase = refreshLibraryUseCase
         self.manualDownloadUseCase = processManualDownloadUseCase
-        self.finishEpisodeUseCase = finishEpisodeUseCase
+        self.setEpisodeAsListenedUseCase = setEpisodeAsListenedUseCase
+        self.startPlayingEpisodeUseCase = startPlayingEpisodeUseCase
         self.playbackManager = playbackManager
         self._showFullPlayer = showFullPlayer
         
@@ -53,7 +56,7 @@ class RecentEpisodesViewModel: ObservableObject {
     }
 
     func refresh() async {
-        await refreshLibraryUseCase.execute()
+        await refreshLibraryUseCase.execute(notifyUser: false)
     }
     
     func startManualDownload(_ episode: Episode, manualOverride: Bool) {
@@ -71,16 +74,19 @@ class RecentEpisodesViewModel: ObservableObject {
         }
     }
     
-    func episodeListenedSwipeAction(_ episode: Episode) {
-        finishEpisodeUseCase.execute(episode)
+    func episodeListenedSwipeAction(_ episode: Episode) async {
+        await setEpisodeAsListenedUseCase.execute(episode)
     }
     
     func selectEpisode(_ episode: Episode) {
         showFullPlayer = true
-        playbackManager.loadEpisodeAndPlaylist(
-            episode: episode,
-            playlist: unlistenedEpisodes
-        )
+//        playbackManager.loadEpisodeAndPlaylist(
+//            episode: episode,
+//            playlist: unlistenedEpisodes
+//        )
+        Task {
+            try await startPlayingEpisodeUseCase.execute(episodeId: episode.objectID)
+        }
     }
 
 }

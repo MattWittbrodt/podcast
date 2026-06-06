@@ -14,11 +14,17 @@ struct PodcastList: View {
     
     private let appDependencies: AppDependencies
     private let episodeRepository: EpisodeRepository
+    private let startPlayingEpisodeUseCase: StartPlayingEpisodeUseCase
     
-    init(appDependencies: AppDependencies, episodeRepository: EpisodeRepository, showFullPlayer: Binding<Bool>) {
+    init(
+        appDependencies: AppDependencies,
+        episodeRepository: EpisodeRepository,
+        startPlayingEpisodeUseCase: StartPlayingEpisodeUseCase,
+        showFullPlayer: Binding<Bool>) {
         
         self.appDependencies = appDependencies
         self.episodeRepository = episodeRepository
+        self.startPlayingEpisodeUseCase = startPlayingEpisodeUseCase
         
         self._showFullPlayer = showFullPlayer
                 
@@ -51,6 +57,7 @@ struct PodcastList: View {
                    PodcastView(
                         appDependencies: appDependencies,
                         episodeRepository: episodeRepository,
+                        startPlayingEpisodeUseCase: startPlayingEpisodeUseCase,
                         podcast: podcast,
                         showFullPlayer: $showFullPlayer,
                    )

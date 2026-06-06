@@ -88,7 +88,7 @@ extension DownloadManager {
             return
         }
         
-        guard !downloadFileExists(for: episode), !activeDownloads.contains(episode.objectID)
+        guard !downloadFileExists(for: episode.savedFileName()), !activeDownloads.contains(episode.objectID)
         else {
             return
         }
@@ -123,28 +123,22 @@ extension DownloadManager {
         return currentState.eraseToAnyPublisher()
     }
     
-    func downloadFileExists(for episode: Episode) -> Bool {
-        guard let episodePath = self.generateStoreFilePath(for: episode.savedFileName()) else {
-            print("❌ No file path")
-            return false
-        }
+    func downloadFileExists(for path: String) -> Bool {
+        let episodePath = self.generateStoreFilePath(for: path)
         return FileManager.default.fileExists(atPath: episodePath.path)
     }
     
-    func getFullDownloadPath(for episode: Episode) -> URL? {
-        return self.generateStoreFilePath(for: episode.savedFileName())
+    func getFullDownloadPath(for path: String) -> URL {
+        return self.generateStoreFilePath(for: path)
     }
     
-    func removeDownload(for episode: Episode) {
-        guard let episodePath = self.generateStoreFilePath(for: episode.savedFileName()) else {
-            print("❌ No file path")
-            return
-        }
+    func removeDownload(for path: String, id: NSManagedObjectID) {
+        let episodePath = self.generateStoreFilePath(for: path)
         do {
-            if downloadFileExists(for: episode) {
+            if downloadFileExists(for: path) {
                 try FileManager.default.removeItem(at: episodePath)
                 Task { @MainActor in
-                    self.update(episodeId: episode.objectID, newState: .notDownloaded)
+                    self.update(episodeId: id, newState: .notDownloaded)
                 }
             }
         } catch {
@@ -174,9 +168,7 @@ extension DownloadManager {
     
     // Finds actual download length (vs whats in RSS)
     func getActualFileLength(for episode: Episode) async -> Int16? {
-        guard let episodePath = self.generateStoreFilePath(for: episode.savedFileName()) else {
-            return nil
-        }
+        let episodePath = self.generateStoreFilePath(for: episode.savedFileName())
         
         let asset = AVURLAsset(url: episodePath)
         do {
@@ -200,7 +192,7 @@ extension DownloadManager {
     // Called when the network transfer has finished and we need to handle result
     func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didFinishDownloadingTo location: URL) {
         guard let downloadData = taskMap[downloadTask.taskIdentifier] else { return }
-        guard let destinationURL = generateStoreFilePath(for: downloadData.filePath) else { return }
+        let destinationURL = generateStoreFilePath(for: downloadData.filePath)
         
         let fm = FileManager.default
         if fm.fileExists(atPath: destinationURL.path) {
@@ -313,7 +305,7 @@ extension DownloadManager {
         }
     }
     
-    func generateStoreFilePath(for savedFileName: String) -> URL? {
+    func generateStoreFilePath(for savedFileName: String) -> URL {
         let fileName = "\(savedFileName).mp3"
         let sanitizedFileName = sanitizeFileName(fileName)
         return self.downloadsDirectory.appendingPathComponent(sanitizedFileName)
