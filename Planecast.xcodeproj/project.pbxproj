@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		4F13440E2FE853CE00BA5740 /* AppContainer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F13440D2FE853CE00BA5740 /* AppContainer.swift */; };
 		4F52BD6D2D9ACFCA00A7273D /* PodcastApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F52BD6C2D9ACFCA00A7273D /* PodcastApp.swift */; };
 		4F5FD96A2E1E12AD0062A339 /* FirebaseCrashlytics in Frameworks */ = {isa = PBXBuildFile; productRef = 4F5FD9692E1E12AD0062A339 /* FirebaseCrashlytics */; };
 		4F5FD96D2E1E18E10062A339 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 4F5FD96C2E1E18E10062A339 /* GoogleService-Info.plist */; };
@@ -57,6 +58,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		4F13440D2FE853CE00BA5740 /* AppContainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppContainer.swift; sourceTree = "<group>"; };
 		4F52BD6C2D9ACFCA00A7273D /* PodcastApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodcastApp.swift; sourceTree = "<group>"; };
 		4F5FD96C2E1E18E10062A339 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		4FBFBB592DD83BCE00A82FF4 /* A refined, minimalist vector logo for a French-inspired podcast app that fills the entire image. The design features a graceful, full-canvas abstract arch. This elegant arch, reminiscent of a classic French doorway, is integrated with subtl.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "A refined, minimalist vector logo for a French-inspired podcast app that fills the entire image. The design features a graceful, full-canvas abstract arch. This elegant arch, reminiscent of a classic French doorway, is integrated with subtl.png"; path = "../../../Downloads/A refined, minimalist vector logo for a French-inspired podcast app that fills the entire image. The design features a graceful, full-canvas abstract arch. This elegant arch, reminiscent of a classic French doorway, is integrated with subtl.png"; sourceTree = "<group>"; };
@@ -159,6 +161,7 @@
 			isa = PBXGroup;
 			children = (
 				4F52BD6C2D9ACFCA00A7273D /* PodcastApp.swift */,
+				4F13440D2FE853CE00BA5740 /* AppContainer.swift */,
 				4F5FD96C2E1E18E10062A339 /* GoogleService-Info.plist */,
 				4FCE9F9E2D57A94B000A5F15 /* podcast */,
 				4FCE9FAF2D57A955000A5F15 /* podcastTests */,
@@ -398,6 +401,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				4F52BD6D2D9ACFCA00A7273D /* PodcastApp.swift in Sources */,
+				4F13440E2FE853CE00BA5740 /* AppContainer.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

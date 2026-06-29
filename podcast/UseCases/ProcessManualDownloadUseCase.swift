@@ -11,13 +11,13 @@ struct ProcessManualDownloadUseCase {
     let downloadManager: DownloadManager
     let episodeRepository: EpisodeRepository
 
-    func execute(for episode: Episode, manualOverride: Bool = false) {
+    func execute(for episode: EpisodeRecord, manualOverride: Bool = false) {
         // 1. Business Logic: Start the actual file transfer
         downloadManager.startDownload(for: episode, manualOverride: manualOverride)
         
         // 2. Business Logic: Update the 'Truth' in the database
-        Task {@MainActor in
-            episodeRepository.markAsManuallyDownloaded(episode)
+        Task {
+            await episodeRepository.markAsManuallyDownloaded(episode.objectId)
         }
     }
 }

@@ -8,26 +8,25 @@
 import SwiftUI
 
 struct PlayerChapters: View {
-    @EnvironmentObject var playbackManager: PlaybackManager
+    @Environment(PlayerViewModel.self) var viewModel
     @EnvironmentObject var themeManager: ThemeManager
     @State private var showSheet = false
     
     var body: some View {
-        if let chapters = playbackManager.episodeChapters,
-                   let chapter = playbackManager.currentChapter {
+        if let chapter = viewModel.currentChapter {
             HStack{
                 Image(systemName: "list.dash")
-                Text("\(chapter.title ?? "Missing title")")
+                Text("\(chapter.chapterTitle)")
                     .fontDesign(.rounded)
                     .fontWeight(.medium)
             }
             .onTapGesture { showSheet = true }
             .sheet(isPresented: $showSheet) {
                 ChapterListView(
-                    chapters: chapters,
+                    chapters: viewModel.episodeChapters,
                     currentChapterStartTime: chapter.startTime,
                     onChapterSelected: { time in
-                        playbackManager.seek(seconds: Int64(time))
+                        viewModel.seek(to: Double(time))
                     }
                 )
                 .environmentObject(themeManager)
@@ -38,11 +37,11 @@ struct PlayerChapters: View {
 
 struct ChapterListView: View {
     @EnvironmentObject var themeManager: ThemeManager
-    let chapters: [Chapter]
+    let chapters: [ChapterRecord]
     let currentChapterStartTime: Int16
     let onChapterSelected: (Double) -> Void
     
-    init(chapters: [Chapter],
+    init(chapters: [ChapterRecord],
          currentChapterStartTime: Int16,
          onChapterSelected: @escaping (Double) -> Void) {
         self.chapters = chapters
@@ -72,7 +71,7 @@ struct ChapterListView: View {
         }
     }
     
-    private func chapterButton(for chapter: Chapter) -> some View {
+    private func chapterButton(for chapter: ChapterRecord) -> some View {
         Button {
             onChapterSelected(Double(chapter.startTime))
         } label: {
@@ -96,12 +95,12 @@ struct ChapterListView: View {
 
 struct ChapterRow: View {
     @EnvironmentObject var themeManager: ThemeManager
-    let chapter: Chapter
+    let chapter: ChapterRecord
     let isCurrent: Bool
     
     var body: some View {
         HStack {
-            Text(chapter.title ?? "")
+            Text(chapter.chapterTitle)
                 .fontWeight(isCurrent ? .bold : .thin)
                 .foregroundColor(isCurrent ? Color(themeManager.selectedTheme.primaryColor) : Color(themeManager.selectedTheme.primaryColor))
             Spacer()

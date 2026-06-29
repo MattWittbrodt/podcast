@@ -1,36 +1,26 @@
+////
+////  PodcastList.swift
+////  podcast
+////
+////  Created by Matt Wittbrodt on 5/27/25.
+////
 //
-//  PodcastList.swift
-//  podcast
-//
-//  Created by Matt Wittbrodt on 5/27/25.
-//
-
 import SwiftUI
 
 struct PodcastList: View {
-    @StateObject private var viewModel: PodcastListViewModel
+    @State private var viewModel: PodcastListViewModel
     @EnvironmentObject private var themeManager: ThemeManager
     @Binding var showFullPlayer: Bool
     
-    private let appDependencies: AppDependencies
-    private let episodeRepository: EpisodeRepository
-    private let startPlayingEpisodeUseCase: StartPlayingEpisodeUseCase
+    private let container: AppContainer
     
     init(
-        appDependencies: AppDependencies,
-        episodeRepository: EpisodeRepository,
-        startPlayingEpisodeUseCase: StartPlayingEpisodeUseCase,
-        showFullPlayer: Binding<Bool>) {
-        
-        self.appDependencies = appDependencies
-        self.episodeRepository = episodeRepository
-        self.startPlayingEpisodeUseCase = startPlayingEpisodeUseCase
-        
+        container: AppContainer,
+        showFullPlayer: Binding<Bool>
+    ) {
+        self.container = container
         self._showFullPlayer = showFullPlayer
-                
-        self._viewModel = StateObject(wrappedValue: PodcastListViewModel(
-            appDependencies: appDependencies,
-        ))
+        self._viewModel = State(wrappedValue: PodcastListViewModel(podcastRepository: container.podcastRepository))
     }
         
     var body: some View {
@@ -52,18 +42,16 @@ struct PodcastList: View {
     
     private func podcastList(in geometry: GeometryProxy) -> some View {
         List {
-            ForEach(viewModel.podcasts, id: \.id) { podcast in
+            ForEach(viewModel.podcasts, id: \.objectId) { podcast in
                 NavigationLink {
                    PodcastView(
-                        appDependencies: appDependencies,
-                        episodeRepository: episodeRepository,
-                        startPlayingEpisodeUseCase: startPlayingEpisodeUseCase,
-                        podcast: podcast,
-                        showFullPlayer: $showFullPlayer,
+                    podcast: podcast,
+                    container: container,
+                    //showFullPlayer: $showFullPlayer,
                    )
                 } label: {
                     PodcastListCard(
-                        title: podcast.title,
+                        title: podcast.podcastTitle,
                         author: podcast.author,
                         image: podcast.imageUrl ?? ""
                     )
@@ -80,7 +68,7 @@ struct PodcastList: View {
         .scrollContentBackground(.hidden)
     }
     
-    private func swipeActions(for podcast: Podcast) -> some View {
+    private func swipeActions(for podcast: PodcastRecord) -> some View {
         HStack {
             Button(action: {
                 viewModel.unsuscribeFromPodcast(podcast)
@@ -102,19 +90,19 @@ struct PodcastList: View {
         .background(Color(themeManager.selectedTheme.secondoryColor))
     }
 }
-
-
-//#Preview {
-//    @Previewable @State var showFullPlayer: Bool = false
-//    let dm = DataManager.preview
-//    let dlManager = DownloadManager()
-//    let _ = print("here2: \(dm.podcasts.count)")
-//    let sm = SettingsManager(dataManager: dm)
-//    let pbM = PlaybackManager(downloadManager: dlManager, dataManager: dm, settingsManager: sm)
-//    
-//    PodcastList(showFullPlayer: $showFullPlayer)
-//        .environmentObject(dm)
-//        .environmentObject(pbM)
-//        .environmentObject(DownloadManager())
-//        .environmentObject(ThemeManager())
-//}
+//
+//
+////#Preview {
+////    @Previewable @State var showFullPlayer: Bool = false
+////    let dm = DataManager.preview
+////    let dlManager = DownloadManager()
+////    let _ = print("here2: \(dm.podcasts.count)")
+////    let sm = SettingsManager(dataManager: dm)
+////    let pbM = PlaybackManager(downloadManager: dlManager, dataManager: dm, settingsManager: sm)
+////    
+////    PodcastList(showFullPlayer: $showFullPlayer)
+////        .environmentObject(dm)
+////        .environmentObject(pbM)
+////        .environmentObject(DownloadManager())
+////        .environmentObject(ThemeManager())
+////}

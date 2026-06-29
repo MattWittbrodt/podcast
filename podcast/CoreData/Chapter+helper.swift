@@ -10,6 +10,10 @@ import CoreData
 
 extension Chapter {
     
+    var chapterTitle: String {
+        title ?? "No Chapter Title"
+    }
+
     @discardableResult
     convenience init(imageData: Data?,
                      imageUrl: String?,

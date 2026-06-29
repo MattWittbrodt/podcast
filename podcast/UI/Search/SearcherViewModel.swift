@@ -29,8 +29,8 @@ class SearcherViewModel: ObservableObject {
     
     private let discoveryManager: DiscoveryManager
     
-    init(appDependencies: AppDependencies) {
-        self.discoveryManager = appDependencies.discoveryManager
+    init(discoveryManager: DiscoveryManager) {
+        self.discoveryManager = discoveryManager
     }
     
     func search(term: String) async -> [PodcastIndexInfo] {

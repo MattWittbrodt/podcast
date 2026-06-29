@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct PlayerOptionsView: View {
-    @EnvironmentObject var playbackManager: PlaybackManager
+    @Environment(PlayerViewModel.self) var viewModel
     @EnvironmentObject var themeManager: ThemeManager
     @Binding var showDescription: Bool
     
@@ -20,10 +20,10 @@ struct PlayerOptionsView: View {
         HStack {
             Spacer()
             PlayerMenu()
-                .environmentObject(playbackManager)
+                .environment(viewModel)
                 .foregroundStyle(Color(themeManager.selectedTheme.primaryColor))
             VStack {
-                if let deviceName = playbackManager.currentAudioDeviceName {
+                if let deviceName = viewModel.audioDeviceName {
                     Text(deviceName)
                         .fontWeight(.medium)
                         .font(.footnote)

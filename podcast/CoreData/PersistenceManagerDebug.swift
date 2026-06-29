@@ -8,7 +8,7 @@
 import Foundation
 import CoreData
 
-extension PersistenceManager {
+extension PersistenceController {
     
     func printCoreDataLocation(container: NSPersistentContainer) {
         // Check if stores have been loaded

@@ -54,9 +54,9 @@ class BackgroundTaskManager {
         // 3. Execute your Use Case asynchronously
         Task {
             if let useCase = refreshLibraryUseCase {
+                print("Exectuing use case")
                 await useCase.execute(notifyUser: true)
                 task.setTaskCompleted(success: true)
-//                UserDefaults.standard.set(Date(), forKey: "last_background_refresh_time")
             } else {
                 task.setTaskCompleted(success: false)
             }

@@ -74,13 +74,6 @@ extension Episode {
         }
     }
     
-    static func allRecent() -> NSFetchRequest<Episode> {
-        let request = Episode.fetchRequest()
-        request.sortDescriptors = [NSSortDescriptor(keyPath: \Episode.publishedDate, ascending: false)]
-        request.predicate = NSPredicate(format: "listened == false")
-        return request
-    }
-    
     static func nextEpisode(current: Episode) -> NSFetchRequest<Episode> {
         let searchDate = current.publishedDate ?? Date.distantFuture
         let request = Episode.fetchRequest()
@@ -111,7 +104,7 @@ extension Episode {
     }
     
     static var example: Episode {
-        let context = PersistenceManager().viewContext
+        let context = PersistenceController().viewContext
         return Episode(title: "1748 - Brain Rot",
                        image: "https://noagendaassets.com/enc/1742507331.163_na-1748-art-feed.jpg",
                        episodeDescription: "No Agenda Episode 1748 - \"Brain Rot\" \"Brain Rot\" Executive Producers: Commodore Sir Onymous of Dogpatch and Lower Slobbovia</p>\n<p>Dame Becky Baroness, of the great katy prairie, protectorate of the gulf coast of texas</p>\n<p>Chap Williams</p>\n<p>Ryan Schubert Sir Scott the White Knight of Pottersville Village in Somerset, Taxachussets</p>\n<p>Baroness Sarah Ruppert</p>\n<p>Viscount Dude Named Jeff</p>\n<p>Associate Executive Producers:</p>\n<p>North Idaho Sanity Brigade Donation</p>\n<p>Anon</p>\n<p>Sir Paulie Bravo Blockman Bing",
@@ -156,10 +149,6 @@ extension Episode {
     
     var podcastImgData: Data? {
         return podcast?.imageData
-    }
-    
-    var podcastTitle: String {
-        podcast?.title ?? "Podcast Title Missing"
     }
     
 }

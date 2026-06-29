@@ -30,6 +30,7 @@ struct UpdateChaptersUseCase {
     }
 
     private func syncChapters(for id: NSManagedObjectID) async {
+        
         // 1. Fetch the data from the MainActor (The "Top Slice")
         let urlString = await MainActor.run { () -> String? in
             repository.getEpisode(for: id)?.chaptersUrl
@@ -37,9 +38,7 @@ struct UpdateChaptersUseCase {
         
         do {
             // 2. Perform validation back on the background thread
-            guard let urlString, let url = URL(string: urlString) else {
-                return
-            }
+            guard let urlString else { return }
             
             guard let decoded = try await feedService.fetchNewChapters(for: urlString) else {
                 return
@@ -64,13 +63,10 @@ struct UpdateChaptersUseCase {
                     collectedChapters.append(finishedChapter)
                 }
                 return collectedChapters
-            }
-            
-            //await MainActor.run {
+            }            
             try await repository.updateChapters(for: id, with: chaptersWithImageData)
-            //}
         } catch {
-            print("Error with chapters for: \(urlString)")
+            print("Failed processing chapters for \(urlString ?? "unknown"): \(error)")
         }
     }
 }

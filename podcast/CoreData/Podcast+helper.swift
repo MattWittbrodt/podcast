@@ -41,11 +41,6 @@ extension Podcast {
         self.podcastDescription = podcastDescription
     }
     
-    static func delete(podcast: Podcast) {
-        guard let context = podcast.managedObjectContext else { return }
-        context.delete(podcast)
-    }
-    
     static func setAllListened(podcast: Podcast) async {
         guard let context = podcast.managedObjectContext,
                   let episodes = podcast.episodes as? Set<Episode> else { return }
@@ -54,12 +49,6 @@ extension Podcast {
             await Episode.handleListened(episode: episode)
         }
         try? context.save()
-    }
-        
-    static func queryByFeedId(_ feedId: Int32) -> NSFetchRequest<Podcast> {
-        let request = Podcast.fetchRequest()
-        request.predicate = NSPredicate(format: "feedId == %d", feedId)
-        return request
     }
 }
 

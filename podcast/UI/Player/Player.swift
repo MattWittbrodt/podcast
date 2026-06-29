@@ -5,24 +5,24 @@ import CoreData
 func formatFloat(_ value: Float) -> String {
     let formatter = NumberFormatter()
     formatter.numberStyle = .decimal
-    formatter.minimumFractionDigits = 1  // Don't force decimal places
-    formatter.maximumFractionDigits = 2  // But show up to 2 if needed
+    formatter.minimumFractionDigits = 1
+    formatter.maximumFractionDigits = 2
     
     return formatter.string(from: NSNumber(value: value)) ?? "\(value)"
 }
 
 struct PlayerMenu: View {
-    @EnvironmentObject var playbackManager: PlaybackManager
+    @Environment(PlayerViewModel.self) var viewModel
     let rates: [Float] = [0.75,1.0,1.25,1.5,1.75,2.0]
     
     var body: some View {
         Menu {
             ForEach(rates, id: \.self) { rate in
                 Button {
-                    Task { playbackManager.updatePlaybackRate(rate) }
+                    Task { viewModel.updateRate(rate) }
                 } label: {
                     LabeledContent {
-                        if rate == playbackManager.playbackRate {
+                        if rate == viewModel.playbackRate {
                             Image(systemName: "checkmark")
                         }
                     } label: {
@@ -31,80 +31,74 @@ struct PlayerMenu: View {
                 }
             }
         } label: {
-            menuLabel
+            HStack(spacing: 4) {
+                Text("\(formatFloat(viewModel.playbackRate))x")
+                    .font(.system(size: 14, weight: .medium))
+                    .monospacedDigit()
+                
+                Image(systemName: "chevron.down")
+                    .font(.caption2)
+            }
+            .background(Color.gray.opacity(0.1))
+            .cornerRadius(8)
         }
-    }
-    
-    private var menuLabel: some View {
-        HStack(spacing: 4) {
-            Text("\(formatFloat(playbackManager.playbackRate))x")
-                .font(.system(size: 14, weight: .medium))
-                .monospacedDigit() // Ensures consistent width for numbers
-            
-            Image(systemName: "chevron.down")
-                .font(.caption2)
-        }
-        .background(Color.gray.opacity(0.1))
-        .cornerRadius(8)
     }
 }
 
 struct PlayerControlsView: View {
-    @EnvironmentObject var playbackManager: PlaybackManager
+    @Environment(PlayerViewModel.self) var viewModel
     @EnvironmentObject var themeManager: ThemeManager
     @State private var isEditing = false
     
     let forwardSkip: Int64
     let backwardSkip: Int64
     
-    init(backwardSkip: Int64, forwardSkip: Int64) {
+    init(
+        backwardSkip: Int64,
+        forwardSkip: Int64
+    ) {
         self.backwardSkip = backwardSkip
         self.forwardSkip = forwardSkip
     }
     
     var body: some View {
+        @Bindable var viewModel = viewModel
         VStack {
             Slider(
-                value: $playbackManager.currentTime,
-                in: 0...playbackManager.duration,
+                value: $viewModel.currentTime,
+                in: 0...viewModel.duration,
                 onEditingChanged: { isEditing in
-                    playbackManager.isSeeking = isEditing
+                    viewModel.setIsSeeking(isEditing)
                     if !isEditing {
-                        playbackManager.seek(to: playbackManager.currentTime)
-                        
-                        // Optional: small delay before allowing timer updates again
-                        // to prevent the slider from "flicking" back to the old time
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                            playbackManager.isSeeking = false
-                        }
+                        viewModel.finishedScrubbing()
                     }
                 }
             )
             .tint(themeManager.selectedTheme.primaryColor)
             
             HStack {
-                Text("\(playbackManager.currentTimeString)")
+                Text("\(viewModel.currentTimeString)")
                     .fontWeight(.semibold)
                 Spacer()
-                Text("- \(formattedTime(time: Double(playbackManager.duration)-playbackManager.currentTime))")
+                Text("- \(formattedTime(time: Double(viewModel.duration)-viewModel.currentTime))")
                     .fontWeight(.semibold)
             }
             .padding(.bottom, 20)
             
             HStack {
-                Button(action: { playbackManager.skipBackward(seconds: backwardSkip) }) {
+                Button(action: { viewModel.skipBackward(by: backwardSkip) }) {
                     Image(systemName: "gobackward.\(backwardSkip)")
                         .resizable()
                         .frame(width: 40, height: 45 )
                 }
                 Spacer()
-                Button(action: { playbackManager.playPause() }) {
-                    Image(systemName: playbackManager.isPlaying ? "pause.fill" : "play.fill")
+                Button(action: { viewModel.togglePlayPause() }) {
+                    Image(systemName: viewModel.playButtonIcon)
                         .resizable()
                         .frame(width: 35, height: 45 )
                 }
                 Spacer()
-                Button(action: { playbackManager.skipForward(seconds: forwardSkip) }) {
+                Button(action: { viewModel.skipForward(by: forwardSkip) }) {
                     Image(systemName: "goforward.\(forwardSkip)")
                         .resizable()
                         .frame(width: 40, height: 45 )
@@ -117,7 +111,7 @@ struct PlayerControlsView: View {
 
 
 struct EpisodeImageView: View {
-    @EnvironmentObject var playbackManager: PlaybackManager
+    @Environment(PlayerViewModel.self) var viewModel
     @Binding var showDescriptions: Bool
     
     init(showDescriptions: Binding<Bool>) {
@@ -125,7 +119,7 @@ struct EpisodeImageView: View {
     }
     
     var body: some View {
-        if let uIImg = playbackManager.currentEpisodeImage {
+        if let uIImg = viewModel.currentEpisodeImage {
             if !showDescriptions {
                 Image(uiImage: uIImg)
                     .resizable()
@@ -160,22 +154,16 @@ struct AirPlayButton: UIViewRepresentable {
     }
     
     func updateUIView(_ uiView: UIView, context: Context) {
-        // Update the view if needed
     }
 }
     
 struct Player: View {
     @EnvironmentObject var themeManager: ThemeManager
-    @EnvironmentObject var playbackManager: PlaybackManager
-    @StateObject var viewModel: PlayerViewModel
+    
+    // Declared as plain property to adhere to modern @Observable practices
+    var viewModel: PlayerViewModel
     
     @State var showEpisodeNotes: Bool = false
-        
-    init(showFullPlayer: Binding<Bool>, manageSettingsUseCase: ManageSettingsUseCase) {
-        self._viewModel = StateObject(wrappedValue: PlayerViewModel(
-            useCase: manageSettingsUseCase,
-        ))
-    }
         
     var body: some View {
         Color(themeManager.selectedTheme.secondoryColor)
@@ -183,14 +171,14 @@ struct Player: View {
             .overlay(
                 VStack {
                     Spacer()
-                    Text(playbackManager.currentEpisode?.title ?? "No episode selected").lineLimit(1)
+                    Text(viewModel.currentEpisode?.episodeTitle ?? "No episode selected").lineLimit(1)
                         .font(.title3)
                         .fontWeight(.regular)
                         .padding(.leading, 10)
                         .padding(.trailing, 10)
                         .padding(.top, 15)
                     
-                    Text(playbackManager.currentEpisode?.podcast?.title ?? "Podcast")
+                    Text(viewModel.currentEpisode?.podcastTitle ?? "Podcast")
                         .font(.callout)
                         .foregroundStyle(Color(themeManager.selectedTheme.primaryColor)).opacity(0.7)
                     Spacer()
@@ -200,10 +188,12 @@ struct Player: View {
                                 showEpisodeNotes.toggle()
                             }
                         }
+                        .environment(viewModel)
+                        .environmentObject(themeManager)
                     
                     // Chapter display and list
                     PlayerChapters()
-                        .environmentObject(playbackManager)
+                        .environment(viewModel)
                         .environmentObject(themeManager)
                         .presentationDragIndicator(.visible)
                         .padding(.top, 40)
@@ -217,9 +207,11 @@ struct Player: View {
                         )
                             .padding([.leading, .trailing], 30)
                             .foregroundStyle(Color(themeManager.selectedTheme.primaryColor))
+                            .environment(viewModel)
                         PlayerOptionsView(showDescription: $showEpisodeNotes)
                             .padding([.leading, .trailing], 30)
                             .padding(.top, 45)
+                            .environment(viewModel)
                     }
                 }
                 .background(Color(themeManager.selectedTheme.secondoryColor))
@@ -229,7 +221,8 @@ struct Player: View {
 }
 
 struct PlayerNotesAndImage: View {
-    @EnvironmentObject var playbackManager: PlaybackManager
+    @Environment(PlayerViewModel.self) var viewModel
+    @EnvironmentObject var themeManager: ThemeManager
     @Binding var showDescription: Bool
     
     init(showDescription: Binding<Bool>) {
@@ -239,46 +232,13 @@ struct PlayerNotesAndImage: View {
     var body: some View {
         VStack {
             EpisodeImageView(showDescriptions: $showDescription)
+                .environment(viewModel)
             if showDescription {
                 PlayerEpisodeDescriptionView(
-                    html: playbackManager.currentEpisodeDescription ?? "Bad"
+                    html: viewModel.currentEpisodeDescription ?? "Bad"
                 )
+                .environmentObject(themeManager)
             }
         }
     }
 }
-
-//#Preview {
-//    let dataManager = DataManager.preview
-//    let settings = SettingsManager(dataManager: dataManager)
-//    let downloadManager = DownloadManager()
-//    
-//    let pm = PlaybackManager(
-//        downloadManager: downloadManager,
-//        dataManager: dataManager,
-//        settingsManager: settings)
-//    
-//    // Create sample in the same context that PlaybackManager uses
-//    let episode = Episode.sample(in: dataManager.persistence.viewContext)
-//    pm.currentEpisode = episode
-//    pm.currentEpisodeDescription = pm.parseHTML(html: episode.episodeDescription)
-//    pm.currentAudioDeviceName = "Test Device"
-//    guard let uiImage = UIImage(systemName: "photo.fill")?
-//        .withTintColor(.gray),
-//          let data = uiImage.jpegData(compressionQuality: 1.0) else {
-//        fatalError("Mock image 'placeholder_image' not found or could not be converted to Data.")
-//    }
-//    
-//    episode.imageData = data
-//    pm.currentEpisodeImage = uiImage
-//    
-//    let sampleChapter = Chapter.sample(in: dataManager.persistence.viewContext)
-//    
-//    pm.currentChapter = sampleChapter
-//    pm.episodeChapters = [sampleChapter]
-//    
-//    return Player()
-//        .environmentObject(pm)
-//        .environmentObject(ThemeManager())
-//        .environmentObject(settings)
-//}

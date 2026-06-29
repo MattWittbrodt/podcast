@@ -42,13 +42,15 @@ struct SyncPodcastUseCase {
             // 3. Update everything in one database transaction
             await MainActor.run {
                 repository.updatePodcastRecord(podcastId, channel: channel, image: podcastImage)
-                repository.saveNewEpisodes(episodesWithImages, to: podcastId)
+                Task {
+                    await repository.saveNewEpisodes(episodesWithImages, to: podcastId)
+                }
             }
             
             // After finishing - notify user
             if notifyUser {
                 for epInfo in newItems {
-                    sendNotification(message: "\(epInfo.episodeTitle)", title: "Now Available: \(channel.title)")
+                    sendNotification(message: "\(epInfo.episodeTitle)", title: "\(channel.title)")
                 }
             }
         } catch {

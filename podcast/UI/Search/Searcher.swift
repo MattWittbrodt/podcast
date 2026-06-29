@@ -20,9 +20,9 @@ struct SearcherView: View {
     @State private var showTextField = false
     @State private var rssAdditionText = ""
     
-    init(appDependencies: AppDependencies, useCase: SubscribeToPodcastUseCase) {
+    init(discoveryManager: DiscoveryManager, useCase: SubscribeToPodcastUseCase) {
         self._viewModel = StateObject(wrappedValue: SearcherViewModel(
-            appDependencies: appDependencies,
+            discoveryManager: discoveryManager,
         ))
         self.subscribeUseCase = useCase
     }
