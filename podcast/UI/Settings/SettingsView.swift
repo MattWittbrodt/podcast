@@ -36,6 +36,8 @@ struct SettingsView: View {
     
     @StateObject private var viewModel: SettingsViewModel
     
+    @State private var lastRefreshText: String = "Never"
+    
     init(useCase: ManageSettingsUseCase) {
         self._viewModel = StateObject(wrappedValue: SettingsViewModel(
             useCase: useCase,
@@ -76,6 +78,13 @@ struct SettingsView: View {
                 Button("Clear Library") { activeAction = .clearLibrary }
             }
             .listRowBackground(themeManager.selectedTheme.primaryColor.opacity(0.1))
+            Section("System Status") {
+                Text(viewModel.lastUpdateTime)
+            }
+            .listRowBackground(themeManager.selectedTheme.primaryColor.opacity(0.1))
+            .onAppear {
+                viewModel.getLastUpdateTime()
+            }
         }
         // This sheet appears whenever activeAction is not nil
         .sheet(item: $activeAction) { action in
@@ -93,6 +102,7 @@ struct SettingsView: View {
         .tint(themeManager.selectedTheme.primaryColor)
         .background(themeManager.selectedTheme.secondoryColor)
     }
+
     
     func performAction(_ action: SettingsAction) {
         Task {

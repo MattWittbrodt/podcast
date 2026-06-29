@@ -15,12 +15,14 @@ struct PodcastView: View {
     init(
         appDependencies: AppDependencies,
         episodeRepository: EpisodeRepository,
+        startPlayingEpisodeUseCase: StartPlayingEpisodeUseCase,
         podcast: Podcast,
         showFullPlayer: Binding<Bool>
     ) {
         self.podcast = podcast
         self._viewModel = StateObject(wrappedValue: PodcastViewModel(
             appDependencies: appDependencies,
+            startPlayingEpisodeUseCase: startPlayingEpisodeUseCase,
             podcast: podcast,
             episodeRepository: episodeRepository,
             showFullPlayer: showFullPlayer

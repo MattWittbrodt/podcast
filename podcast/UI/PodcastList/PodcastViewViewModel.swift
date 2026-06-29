@@ -15,7 +15,7 @@ class PodcastViewModel: ObservableObject {
 
     private let dataManager: DataManager
     private let downloadManager: DownloadManager
-    private let playbackManager: PlaybackManager
+    private let startPlayingEpisodeUseCase: StartPlayingEpisodeUseCase
     private let episodeRepository: EpisodeRepository
     private let podcast: Podcast
     @Binding var showFullPlayer: Bool
@@ -24,13 +24,14 @@ class PodcastViewModel: ObservableObject {
     
     init(
         appDependencies: AppDependencies,
+        startPlayingEpisodeUseCase: StartPlayingEpisodeUseCase,
         podcast: Podcast,
         episodeRepository: EpisodeRepository,
         showFullPlayer: Binding<Bool>
     ) {
         self.dataManager = appDependencies.dataManager
         self.downloadManager = appDependencies.downloadManager
-        self.playbackManager = appDependencies.playbackManager
+        self.startPlayingEpisodeUseCase = startPlayingEpisodeUseCase
         self.podcast = podcast
         self.episodeRepository = episodeRepository
         self._showFullPlayer = showFullPlayer
@@ -55,6 +56,8 @@ class PodcastViewModel: ObservableObject {
     
     func handleEpisodeSelection(_ episode: Episode) {
         showFullPlayer = true
-        playbackManager.startPlayingEpisode(episode: episode)
+        Task {
+            try await startPlayingEpisodeUseCase.execute(episodeId: episode.objectID)
+        }
     }
 }

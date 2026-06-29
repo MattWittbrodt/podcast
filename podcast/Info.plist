@@ -4,7 +4,7 @@
 <dict>
 	<key>BGTaskSchedulerPermittedIdentifiers</key>
 	<array>
-		<string>backgroundFetch</string>
+		<string>com.planecast.refreshLibrary</string>
 	</array>
 	<key>UIBackgroundModes</key>
 	<array>

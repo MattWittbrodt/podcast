@@ -10,6 +10,7 @@ import Foundation
 @MainActor
 class SettingsViewModel: ObservableObject {
     @Published var skipOptions: [Int16] = [5,10,15,30,45,60,75,90]
+    @Published var lastUpdateTime: String = "Never"
     
     private let useCase: ManageSettingsUseCase
     
@@ -47,6 +48,17 @@ class SettingsViewModel: ObservableObject {
         set {
             objectWillChange.send()
             useCase.execute(\UserSettings.allowCellularDownloads, to: newValue)
+        }
+    }
+    
+    func getLastUpdateTime() {
+        if let lastDate = UserDefaults.standard.object(forKey: "last_background_refresh_time") as? Date {
+            let formatter = DateFormatter()
+            formatter.dateStyle = .short
+            formatter.timeStyle = .short
+            lastUpdateTime = "Last Data Update: \(formatter.string(from: lastDate))"
+        } else {
+            lastUpdateTime = "None"
         }
     }
 }

@@ -108,11 +108,24 @@ class EpisodeRepository {
     }
     
     // Marks and episode as listened
-    func markEpisodeAsListened(_ episode: Episode) {
-        context.perform {
+    @MainActor
+    func markEpisodeAsListened(_ id: NSManagedObjectID) {
+        let context = self.context
+        
+        context.perform { [context] in
+            guard let episode = try? context.existingObject(with: id) as? Episode else {
+                return
+            }
             episode.listened = true
+            episode.lastListened = Double(episode.duration)
+            do {
+                if context.hasChanges {
+                    try context.save()
+                }
+            } catch {
+                print("❌ Failed to save context: \(error)")
+            }
         }
-        save()
     }
     
     // Marks and episode as unlistened
@@ -211,6 +224,25 @@ class EpisodeRepository {
             
             return firstEpisode
         }
+    }
+    
+    @MainActor
+    func fetchNextEpisode(after episodeID: NSManagedObjectID) async throws -> Episode? {
+        // 1. Safely pull the thread-unsafe object into the current context using its thread-safe ID
+        guard let currentEpisode = try context.existingObject(with: episodeID) as? Episode else {
+            return nil
+        }
+        let request = NSFetchRequest<Episode>(entityName: "Episode")
+        let referenceDate = currentEpisode.publishedDate ?? Date.distantPast
+        request.predicate = NSPredicate(
+            format: "publishedDate <= %@ AND listened = %@",
+            referenceDate as CVarArg,
+            NSNumber(value: false)
+        )
+        request.sortDescriptors = [NSSortDescriptor(key: "publishedDate", ascending: false)]
+        request.fetchLimit = 1
+        
+        return try context.fetch(request).first
     }
     
 }

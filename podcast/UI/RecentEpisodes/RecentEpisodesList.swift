@@ -18,7 +18,8 @@ struct RecentEpisodesList: View {
          downloadManager: DownloadManager,
          refreshLibraryUseCase: RefreshLibraryUseCase,
          processManualDownloadUseCase: ProcessManualDownloadUseCase,
-         finishEpisodeUseCase: FinishEpisodeUseCase,
+         setEpisodeAsListenedUseCase: SetEpisodeAsListenedUseCase,
+         startPlayingEpisodeUseCase: StartPlayingEpisodeUseCase,
          showFullPlayer: Binding<Bool>,
          playbackManager: PlaybackManager) {
                 
@@ -27,7 +28,8 @@ struct RecentEpisodesList: View {
             downloadManager: downloadManager,
             refreshLibraryUseCase: refreshLibraryUseCase,
             processManualDownloadUseCase: processManualDownloadUseCase,
-            finishEpisodeUseCase: finishEpisodeUseCase,
+            setEpisodeAsListenedUseCase: setEpisodeAsListenedUseCase,
+            startPlayingEpisodeUseCase: startPlayingEpisodeUseCase,
             showFullPlayer: showFullPlayer,
             playbackManager: playbackManager,
         ))
@@ -103,7 +105,9 @@ struct RecentEpisodesList: View {
         
         HStack {
             Button(action: {
-                viewModel.episodeListenedSwipeAction(episode)
+                Task {
+                    await viewModel.episodeListenedSwipeAction(episode)
+                }
             }) {
                 Label("Listened", systemImage: "tray.fill")
             }

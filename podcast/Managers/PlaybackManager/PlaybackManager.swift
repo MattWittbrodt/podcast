@@ -8,15 +8,16 @@
 import Foundation
 import AVKit
 import MediaPlayer
+import Combine
 
 @MainActor
 class PlaybackManager: ObservableObject {
-    private let downloadManager: DownloadManager
     private let dataManager: DataManager
     private var settingsRepository: SettingsRepository
     private let saveFrequency: TimeInterval = 5
     
     // Hook to allow Use Cases to listen for the end event
+    private var cancellables = Set<AnyCancellable>()
     var onEpisodeEnded: (() -> Void)?
     
     // MARK: - Published Properties
@@ -30,20 +31,30 @@ class PlaybackManager: ObservableObject {
     @Published var isPlaying: Bool = false
     @Published var episodeChapters: [Chapter]? = nil
     @Published var currentChapter: Chapter?
-    @Published var currentEpisodeImage: UIImage? = nil
     @Published var currentAudioDeviceName: String? = nil
-    @Published var currentEpisodeDescription: AttributedString? = nil
     
     // MARK: - Private Properties
     var player: AVPlayer?
     private var timeObserver: Any?
     
-    init(downloadManager: DownloadManager, dataManager: DataManager, settingsRepository: SettingsRepository) {
-        self.downloadManager = downloadManager
+    init(dataManager: DataManager, settingsRepository: SettingsRepository) {
         self.dataManager = dataManager
         self.settingsRepository = settingsRepository
         setupAudioSession()
         setupCombineSubscribers()
+        setupPlaybackObservers()
+    }
+    
+    // Sets up observer for end of episode using AVPlayerItemDidPlayToEndTime
+    private func setupPlaybackObservers() {
+        NotificationCenter.default
+            .publisher(for: .AVPlayerItemDidPlayToEndTime)
+            .sink { [weak self] notification in
+                guard let item = notification.object as? AVPlayerItem else { return }
+                guard item == self?.player?.currentItem else { return }
+                self?.onEpisodeEnded?()
+            }
+            .store(in: &cancellables)
     }
     
     // Mapping to update the string representation of current time appropriately
@@ -52,37 +63,6 @@ class PlaybackManager: ObservableObject {
             .map { formattedTime(time: $0) }
             .assign(to: &$currentTimeString)
     }
-    
-    func getCurrentImageData() {
-        guard let currentEpisode = currentEpisode else { return }
-                        
-        // Get the source data - using chapter if available
-        let data = (currentChapter?.imageData ?? currentEpisode.getImageData())
-        
-        // Convert to UIImage IMMEDIATELY on the Main Thread
-        if let data = data {
-            // This creates a stable object that survives app switching
-            self.currentEpisodeImage = UIImage(data: data)
-        }
-    }
-    
-    // Function to handle end of episode procedures
-//    func handleEpisodeEnd() {
-//        if !playlistEpisodes.isEmpty {
-//            let nextEpisode = playlistEpisodes.removeFirst()
-//            startPlayingEpisode(episode: nextEpisode)
-//        }
-//    }
-    
-    // Function to handle the 'playlist' functionality
-//    func loadEpisodeAndPlaylist(episode: Episode, playlist: [Episode]) {
-//        if let currentEpisodeIndex = playlist.firstIndex(where: {$0.objectID == episode.objectID}) {
-//            // stores shrunken array of episodes to be played
-//            let indexWithoutEpisode = currentEpisodeIndex + 1
-//            playlistEpisodes = Array(playlist[indexWithoutEpisode...])
-//        }
-//        startPlayingEpisode(episode: episode)
-//    }
     
     func startPlayback(episode: Episode, location: URL) {
         self.cleanupPlayer()
@@ -101,7 +81,6 @@ class PlaybackManager: ObservableObject {
         isPlaying = true
         startProgressUpdates()
         setupRemoteTransportControls()
-        self.currentEpisodeDescription = self.parseHTML(html: currentEpisode?.episodeDescription)
         
         if episode.chapters != nil {
             let chapters = (episode.chapters as? Set<Chapter>)?
@@ -110,7 +89,7 @@ class PlaybackManager: ObservableObject {
         }
         
         // Image data needs to be called after everything has been set up
-        getCurrentImageData()
+//        getCurrentImageData()
         
         setupNowPlayingInfo()
     }
@@ -122,7 +101,6 @@ class PlaybackManager: ObservableObject {
         currentTime = 0.0
         stopProgressUpdates()
         player = nil
-        currentEpisodeImage = nil
     }
 
 }
@@ -174,8 +152,7 @@ extension PlaybackManager {
     }
     
     func updatePlaybackRate(_ rate: Float) {
-        guard let currentEpisode = currentEpisode, let podcast = currentEpisode.podcast, let player = self.player else { return }
-        self.dataManager.updatePodcastRate(podcast, rate: rate )
+        guard let player = self.player else { return }
         self.playbackRate = rate
         player.rate = rate
         if !self.isPlaying {
@@ -230,7 +207,7 @@ extension PlaybackManager {
                     if potentialNewChapter != self?.currentChapter {
                         self?.currentChapter = potentialNewChapter
                         // Important to call after new chapter has been set up
-                        self?.getCurrentImageData()
+                        //self?.getCurrentImageData()
                     }
                 }
                 
@@ -248,10 +225,9 @@ extension PlaybackManager {
                 }
                 
                 // Look for end of episode and handle appropriately
-                if currentEpisode.duration - Int16(time.seconds) < 1 {
-//                    self?.handleEpisodeEnd()
-                    self?.onEpisodeEnded?()
-                }
+//                if currentEpisode.duration - Int16(time.seconds) < 1 {
+//                    self?.onEpisodeEnded?()
+//                }
             }
         }
     }

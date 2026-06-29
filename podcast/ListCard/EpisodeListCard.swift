@@ -54,8 +54,11 @@ struct EpisodeListCard: View {
         }
         .padding()
         .onReceive(
-            downloadManager.downloadStatePublisher(for: episode.objectID,
-                                                   fileAlreadyExists: downloadManager.downloadFileExists(for: episode))) { state in
+            downloadManager.downloadStatePublisher(
+                for: episode.objectID,
+                fileAlreadyExists: downloadManager.downloadFileExists(for: episode.savedFileName())
+            )
+        ) { state in
             downloadState = state
         }
     }
