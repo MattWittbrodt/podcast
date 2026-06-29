@@ -9,32 +9,29 @@ import Foundation
 import Combine
 
 @MainActor
-class PodcastListViewModel: ObservableObject {
-    @Published var podcasts: [Podcast] = []
+@Observable
+class PodcastListViewModel {
+    var podcasts: [PodcastRecord] = []
     
-    @Published var inFocusEpisode: Episode?
-    @Published var activeAlert: AlertType?
+    var inFocusEpisode: Episode?
+    //var activeAlert: AlertType?
     
-    private let dataManager: DataManager
-    private let downloadManager: DownloadManager
+    //private let dataManager: DataManager
+    //private let downloadManager: DownloadManager
     
     private var cancellables = Set<AnyCancellable>()
     
-    init(appDependencies: AppDependencies) {
-        self.dataManager = appDependencies.dataManager
-        self.downloadManager = appDependencies.downloadManager
-        
-        // TODO Set the fetchable in here directly?
-        dataManager.$podcasts
-            .receive(on: RunLoop.main)
-            .sink { [weak self] podcasts in
-                self?.podcasts = podcasts
-            }
-            .store(in: &cancellables)
+    init(podcastRepository: PodcastRepository) {
+        //self.dataManager = dataManager
+        //self.downloadManager = downloadManager
+        Task {
+            guard let podcasts = try? await podcastRepository.fetchAll() else { return }
+            self.podcasts = podcasts
+        }
     }
     
-    func unsuscribeFromPodcast(_ podcast: Podcast) {
-        Podcast.delete(podcast: podcast)
+    func unsuscribeFromPodcast(_ podcast: PodcastRecord) {
+        //Podcast.delete(podcast: podcast)
         //self.dataManager.saveMainContext()
         //self.dataManager.refreshEpisodes()
         //self.dataManager.refreshPodcasts()

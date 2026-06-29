@@ -82,28 +82,29 @@ extension DownloadManager {
         return networkMonitor.isCellular && userDisabledCellular
     }
     
-    func startDownload(for episode: Episode, manualOverride: Bool = false) {
+    func startDownload(for episode: EpisodeRecord, manualOverride: Bool = false) {
         // First, check if we can even download
         if stopCellularDownload() && !manualOverride {
             return
         }
         
-        guard !downloadFileExists(for: episode.savedFileName()), !activeDownloads.contains(episode.objectID)
+        guard !downloadFileExists(for: episode.savedFileName()), !activeDownloads.contains(episode.objectId)
         else {
             return
         }
         
-        guard let epUrl = episode.enclosureUrl, let episodeUrl = URL(string: epUrl) else {
-            print("Bad enclosure URL or guid: \(episode.podcast?.title ?? "Unknown podcast")")
+        guard let epUrl = episode.enclosureUrl,
+                let episodeUrl = URL(string: epUrl) else {
+            print("Bad enclosure URL or guid: \(episode.podcastTitle)")
             return
         }
         
         let task = urlSession.downloadTask(with: episodeUrl)
-        taskMap[task.taskIdentifier] = DownloadData(episodeId: episode.objectID, guid: episode.cleanedGuid, filePath: episode.savedFileName())
+        taskMap[task.taskIdentifier] = DownloadData(episodeId: episode.objectId, guid: episode.guid ?? "Bad guid", filePath: episode.savedFileName())
                 
         // Add episode ID to the active log and update the state subject
         Task { @MainActor in
-            self.update(episodeId: episode.objectID, newState: .downloading)
+            self.update(episodeId: episode.objectId, newState: .downloading)
         }
         
         task.resume()
@@ -167,7 +168,7 @@ extension DownloadManager {
     }
     
     // Finds actual download length (vs whats in RSS)
-    func getActualFileLength(for episode: Episode) async -> Int16? {
+    func getActualFileLength(for episode: EpisodeRecord) async -> Int16? {
         let episodePath = self.generateStoreFilePath(for: episode.savedFileName())
         
         let asset = AVURLAsset(url: episodePath)

@@ -8,26 +8,23 @@
 import SwiftUI
 
 struct MiniPlayerView: View {
-    @EnvironmentObject var playbackManager: PlaybackManager
+    @Environment(PlaybackManager.self) var playbackManager
+    @Environment(PlayerViewModel.self) var playerViewModel
     //@EnvironmentObject var settingsManager: SettingsManager
     @Binding var showFullPlayer: Bool
-    @StateObject private var viewModel: MiniPlayerViewModel
-    
-    init(showFullPlayer: Binding<Bool>, useCase: ManageSettingsUseCase) {
+        
+    init(showFullPlayer: Binding<Bool>) {
         self._showFullPlayer = showFullPlayer
-        self._viewModel = StateObject(wrappedValue: MiniPlayerViewModel(
-            useCase: useCase,
-        ))
     }
     
     var body: some View {
-        if let episode = playbackManager.currentEpisode {
+        if let episode = playerViewModel.currentEpisode {
             Button(action: {
                 self.showFullPlayer = true
             })
             {
                 HStack {
-                    if let image = playbackManager.currentEpisodeImage {
+                    if let image = playerViewModel.currentEpisodeImage {
                         Image(uiImage: image)
                             .resizable()
                             .frame(width: 45, height: 45)
@@ -35,11 +32,11 @@ struct MiniPlayerView: View {
                     }
                     
                     VStack(alignment: .leading) {
-                        Text(episode.title ?? "Podcast title")
+                        Text(episode.episodeTitle)
                             .font(.subheadline)
                             .fontWeight(.medium)
                             .lineLimit(1)
-                        Text(episode.podcast?.title ?? "Now playing")
+                        Text(episode.podcastTitle)
                             .font(.caption)
                             .fontWeight(.semibold)
                             .foregroundColor(.secondary)
@@ -58,10 +55,11 @@ struct MiniPlayerView: View {
                     }
                     
                     Button(action: {
-                        playbackManager.skipForward(seconds: Int64(viewModel.forwardSkip))
+                        // Integrate settings
+                        playerViewModel.skipForward(by: Int64(30))
                     })
                     {
-                        Image(systemName: "\(viewModel.forwardSkip).arrow.trianglehead.clockwise")
+                        Image(systemName: "\(30).arrow.trianglehead.clockwise")
                             .imageScale(.large)
                             .fontWeight(.semibold)
                     }

@@ -13,7 +13,7 @@ struct ChapterResponse: Decodable {
 }
 
 struct ChapterInfo: Hashable, Codable {
-    let startTime: Int16
+    let startTime: Float16
     let title: String?
     let img: String?
     var imgData: Data?
@@ -176,8 +176,12 @@ extension PodcastFeedService {
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
 
-        guard let (data, _) = try? await URLSession.shared.data(for: request) else {
-            throw ChapterError.noData(chaptersUrl)
+        let data: Data
+        do {
+            let (networkData, _) = try await URLSession.shared.data(for: request)
+            data = networkData
+        } catch {
+            throw ChapterError.noData(chaptersUrl, "\(error)")
         }
             
         do {

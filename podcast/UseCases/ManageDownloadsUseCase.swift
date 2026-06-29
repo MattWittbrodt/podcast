@@ -17,18 +17,17 @@ struct ManageDownloadsUseCase {
         // Start auto-downloads
         for episode in episodesToKeep {
             downloadManager.startDownload(for: episode)
-            
             if let actualLength = await downloadManager.getActualFileLength(for: episode), actualLength != episode.duration {
-                await repository.updateDurationFromFile(for: episode, length: actualLength)
+                await repository.updateDurationFromFile(for: episode.objectId, length: actualLength)
             }
         }
 
         // Cleanup episodes that should not be saved on device
         // ONLY remove if it's NOT in the 'keep' list AND NOT a 'manual' download
-        let allUnlistened = await repository.getAllUnlistenedEpisodes()
+        guard let allUnlistened = try? await repository.fetchUnlistened() else { return }
         for episode in allUnlistened {
             if !episodesToKeep.contains(episode) && !episode.manualDownload {
-                downloadManager.removeDownload(for: episode.savedFileName(), id: episode.objectID)
+                downloadManager.removeDownload(for: episode.savedFileName(), id: episode.objectId)
             }
         }
     }

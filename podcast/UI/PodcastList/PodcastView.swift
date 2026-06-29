@@ -8,24 +8,20 @@
 import SwiftUI
 
 struct PodcastView: View {
+    @State private var viewModel: PodcastViewModel
+    @Environment(PlayerViewModel.self) var playerVM
+    let podcast: PodcastRecord
     
-    @StateObject private var viewModel: PodcastViewModel
-    let podcast: Podcast
-    
-    init(
-        appDependencies: AppDependencies,
-        episodeRepository: EpisodeRepository,
-        startPlayingEpisodeUseCase: StartPlayingEpisodeUseCase,
-        podcast: Podcast,
-        showFullPlayer: Binding<Bool>
-    ) {
+    init(podcast: PodcastRecord, container: AppContainer) {
         self.podcast = podcast
-        self._viewModel = StateObject(wrappedValue: PodcastViewModel(
-            appDependencies: appDependencies,
-            startPlayingEpisodeUseCase: startPlayingEpisodeUseCase,
+        self._viewModel = State(wrappedValue: PodcastViewModel(
+            dataManager: container.dataManager,
+            downloadManager: container.downloadManager,
+            playbackUseCase: container.playbackUseCase,
             podcast: podcast,
-            episodeRepository: episodeRepository,
-            showFullPlayer: showFullPlayer
+            podcastRepository: container.podcastRepository,
+            loadEpisodeUseCase: container.loadEpisodeUseCase,
+            //showFullPlayer: showFullPlayer
         ))
     }
     
@@ -42,7 +38,7 @@ struct PodcastView: View {
             }
         }
         List {
-            ForEach(viewModel.episodes, id: \.id) { episode in
+            ForEach(viewModel.episodes, id: \.objectId) { episode in
                 EpisodeListCard(episode: episode)
                     .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
                     .listRowBackground(Color.clear)
@@ -50,7 +46,9 @@ struct PodcastView: View {
                         swipeActions(for: episode)
                     }
                     .onTapGesture {
-                        viewModel.handleEpisodeSelection(episode)
+                        Task {
+                            await playerVM.selectEpisode(episode.objectId)
+                        }
                     }
             }
         }
@@ -60,7 +58,7 @@ struct PodcastView: View {
         
     }
     
-    private func swipeActions(for episode: Episode) -> some View {
+    private func swipeActions(for episode: EpisodeRecord) -> some View {
         HStack {
             Button(action: {
                 Task {

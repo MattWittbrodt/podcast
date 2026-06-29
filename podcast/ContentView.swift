@@ -8,88 +8,59 @@ import SwiftUI
 
 struct ContentView: View {
     @Environment(\.scenePhase) var scenePhase
+    @Environment(AppContainer.self) var container: AppContainer
+        
     @StateObject var themeManager = ThemeManager()
     
     @State private var selectedEpisode: Episode?
     @State private var showFullPlayer = false
     @State private var showMiniPlayer = false
     @State private var updateMessage = ""
-    
-    @StateObject var discoveryManager: DiscoveryManager
-    @StateObject var downloadManager: DownloadManager
-    @StateObject var dataManager: DataManager
-    @StateObject var feedService: PodcastFeedService
-    @StateObject var playbackManager: PlaybackManager
-    //@StateObject var settings: SettingsManager
-    var useCaseProvider: UseCaseProvider
-    
-    let appDependencies: AppDependencies
-    
+    @State private var selectedTab = 0
+      
     var body: some View {
         ZStack(alignment: .bottom) {
             TabView {
                 Tab("Home", systemImage: "house") {
                     RecentEpisodesList(
-                        dataManager: dataManager,
-                        downloadManager: downloadManager,
-                        refreshLibraryUseCase: useCaseProvider.makeRefreshLibraryUseCase(),
-                        processManualDownloadUseCase: useCaseProvider.makeProcessManualDownloadUseCase(),
-                        setEpisodeAsListenedUseCase: useCaseProvider.makeSetEpisodeAsListenedUseCase(),
-                        startPlayingEpisodeUseCase: useCaseProvider.makeStartPlayingEpisodeUseCase(),
-                        showFullPlayer: $showFullPlayer,
-                        playbackManager: playbackManager
+                        container: container,
                     )
                     .environmentObject(themeManager)
-                    .toolbar(.visible, for: .tabBar)
-                    .toolbarBackground(.visible, for: .tabBar) //<- here
+                    //.toolbar(.visible, for: .tabBar)
+                    //.toolbarBackground(.visible, for: .tabBar)
                 }
                 Tab("Podcasts", systemImage: "books.vertical") {
                     PodcastList(
-                        appDependencies: appDependencies,
-                        episodeRepository: useCaseProvider.episodeRepository,
-                        startPlayingEpisodeUseCase: useCaseProvider.makeStartPlayingEpisodeUseCase(),
-                        showFullPlayer: $showFullPlayer)
-                        .toolbar(.visible, for: .tabBar)
-                        .toolbarBackground(.visible, for: .tabBar) //<- here
+                        container: container,
+                        showFullPlayer: $showFullPlayer
+                    )
+                    .toolbar(.visible, for: .tabBar)
+                    .toolbarBackground(.visible, for: .tabBar)
                 }
                 Tab("Discover", systemImage: "magnifyingglass") {
                     SearcherView(
-                        appDependencies: appDependencies,
-                        useCase: useCaseProvider.makeSubscribeToPodcastUseCase()
+                        discoveryManager: container.discoveryManager,
+                        useCase: container.subscribeToPodcastUseCase
                     )
                     .toolbar(.visible, for: .tabBar)
                     .toolbarBackground(.visible, for: .tabBar)
                 }
                 Tab("Settings", systemImage: "gear") {
-                    SettingsView(useCase: useCaseProvider.makeManageSettingsUseCase())
+                    SettingsView(useCase: container.manageSettingsUseCase)
                        .toolbar(.visible, for: .tabBar)
-                       .toolbarBackground(.visible, for: .tabBar) //<- here
+                       .toolbarBackground(.visible, for: .tabBar)
                 }
-//
-
-//     
-////                BookmarksView()
-////                    .tabItem {
-////                        Image(systemName: "bookmark")
-////                        Text("Bookmarks")
-////                    }
-////                    .environmentObject(themeManager)
-//                
-//
             }
-            .environmentObject(dataManager)
-            .environmentObject(playbackManager)
-            .environmentObject(downloadManager)
+            .environment(container.dataManager)
+            .environment(container.playbackManager)
+            .environmentObject(container.downloadManager)
             .environmentObject(themeManager)
-            //.environmentObject(settingsManager)
             .accentColor(Color(themeManager.selectedTheme.primaryColor))
             
-            if playbackManager.currentEpisode != nil {
-                MiniPlayerView(
-                    showFullPlayer: $showFullPlayer,
-                    useCase: useCaseProvider.makeManageSettingsUseCase()
-                )
-                    .environmentObject(playbackManager)
+            if container.playbackManager.currentEpisode != nil {
+                MiniPlayerView(showFullPlayer: $showFullPlayer)
+                    .environment(container.playbackManager)
+                    .environment(container.playerViewModel)
                     .transition(.move(edge: .bottom))
                     .zIndex(1)
                     .padding(.bottom, UIApplication.shared.windows.first?.safeAreaInsets.bottom == 0 ? 20 : 0)
@@ -97,27 +68,17 @@ struct ContentView: View {
             }
         }
         .ignoresSafeArea(edges: .bottom)
-        .sheet(isPresented: $showFullPlayer) {
-            Player(
-                showFullPlayer: $showFullPlayer,
-                manageSettingsUseCase: useCaseProvider.makeManageSettingsUseCase()
-            )
-                .environmentObject(playbackManager)
+        .sheet(isPresented: Bindable(container.playerViewModel).showFullPlayer) {
+            Player(viewModel: container.playerViewModel)
                 .environmentObject(themeManager)
-                //.environmentObject(settingsManager)
                 .presentationDragIndicator(.visible)
         }
         .onChange(of: scenePhase) { oldValue, newValue in
             if newValue == .active {
                 Task {
-                    await useCaseProvider.makeRefreshLibraryUseCase().execute(notifyUser: false)
+                    await container.refreshLibraryUseCase.execute(notifyUser: false)
                 }
             }
         }
     }
 }
-
-//#Preview {
-//    ContentView()
-//        .environmentObject(PlayerViewModel(context: PersistenceController.preview.container.viewContext))
-//}

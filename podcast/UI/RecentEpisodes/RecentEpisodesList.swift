@@ -9,29 +9,25 @@ import SwiftUI
 import CoreData
 
 struct RecentEpisodesList: View {
-    @StateObject private var viewModel: RecentEpisodesViewModel
+    @State private var viewModel: RecentEpisodesViewModel
     
     // Global environment
     @EnvironmentObject private var themeManager: ThemeManager
+    
+    var activeAlert: AlertType?
         
-    init(dataManager: DataManager,
-         downloadManager: DownloadManager,
-         refreshLibraryUseCase: RefreshLibraryUseCase,
-         processManualDownloadUseCase: ProcessManualDownloadUseCase,
-         setEpisodeAsListenedUseCase: SetEpisodeAsListenedUseCase,
-         startPlayingEpisodeUseCase: StartPlayingEpisodeUseCase,
-         showFullPlayer: Binding<Bool>,
-         playbackManager: PlaybackManager) {
+    init(container: AppContainer) {
                 
-        self._viewModel = StateObject(wrappedValue: RecentEpisodesViewModel(
-            dataManager: dataManager,
-            downloadManager: downloadManager,
-            refreshLibraryUseCase: refreshLibraryUseCase,
-            processManualDownloadUseCase: processManualDownloadUseCase,
-            setEpisodeAsListenedUseCase: setEpisodeAsListenedUseCase,
-            startPlayingEpisodeUseCase: startPlayingEpisodeUseCase,
-            showFullPlayer: showFullPlayer,
-            playbackManager: playbackManager,
+        self._viewModel = State(wrappedValue: RecentEpisodesViewModel(
+            dataManager: container.dataManager,
+            downloadManager: container.downloadManager,
+            refreshLibraryUseCase: container.refreshLibraryUseCase,
+            processManualDownloadUseCase: container.processManualDownloadUseCase,
+            setEpisodeAsListenedUseCase: container.setEpisodeAsListenedUseCase,
+            //showFullPlayer: showFullPlayer,
+            playbackManager: container.playbackManager,
+            playerViewModel: container.playerViewModel,
+            loadEpisodesUseCase: container.loadEpisodeUseCase,
         ))
     }
     
@@ -49,24 +45,24 @@ struct RecentEpisodesList: View {
                     await viewModel.refresh()
                 }
         }
-        .alert(
-            viewModel.activeAlert?.id ?? "Alert",
-            isPresented: Binding(
-                get: { viewModel.activeAlert != nil },
-                set: { if !$0 { viewModel.activeAlert = nil } }
-            )
-        ) {
-            if case .cellularDownload = viewModel.activeAlert {
-                if let episode = viewModel.inFocusEpisode {
-                    Button("Download Anyway") {
-                        viewModel.startManualDownload(episode, manualOverride: true)
-                    }
-                }
-                Button("Cancel", role: .cancel) {}
-            }
-        } message: {
-            Text("Selection an option")
-        }
+//        .alert(
+//            viewModel.activeAlert?.id ?? "Alert",
+//            isPresented: Binding(
+//                get: { viewModel.activeAlert != nil },
+//                set: { if !$0 { viewModel.activeAlert = nil } }
+//            )
+//        ) {
+//            if case .cellularDownload = viewModel.activeAlert {
+//                if let episode = viewModel.inFocusEpisode {
+//                    Button("Download Anyway") {
+//                        viewModel.startManualDownload(episode, manualOverride: true)
+//                    }
+//                }
+//                Button("Cancel", role: .cancel) {}
+//            }
+//        } message: {
+//            Text("Selection an option")
+//        }
     }
     
     private var header: some View {
@@ -84,7 +80,7 @@ struct RecentEpisodesList: View {
     
     private func episodeList(in geometry: GeometryProxy) -> some View {
         List {
-            ForEach(viewModel.unlistenedEpisodes, id: \.objectID) { episode in
+            ForEach(viewModel.unlistenedEpisodes, id: \.objectId) { episode in
                 EpisodeListCard(episode: episode)
                     .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
                     .listRowBackground(Color.clear)
@@ -92,16 +88,19 @@ struct RecentEpisodesList: View {
                         swipeActions(for: episode)
                     }
                     .onTapGesture {
-                        viewModel.selectEpisode(episode)
+                        Task {
+                            await viewModel.selectEpisode(episode)
+                        }
                     }
             }
         }
         .listStyle(.plain)
         .background(themeManager.selectedTheme.secondoryColor)
         .scrollContentBackground(.hidden)
+        .task { await viewModel.loadEpisodes() }
     }
 
-    private func swipeActions(for episode: Episode) -> some View {
+    private func swipeActions(for episode: EpisodeRecord) -> some View {
         
         HStack {
             Button(action: {

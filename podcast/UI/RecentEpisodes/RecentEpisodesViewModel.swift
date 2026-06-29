@@ -10,10 +10,10 @@ import Combine
 import SwiftUI
 
 @MainActor
-class RecentEpisodesViewModel: ObservableObject {
-    @Published var inFocusEpisode: Episode?
-    @Published var activeAlert: AlertType?
-    @Published var unlistenedEpisodes: [Episode] = []
+@Observable
+class RecentEpisodesViewModel {
+    var inFocusEpisode: EpisodeRecord?
+    //var activeAlert: AlertType?
     
     private let dataManager: DataManager
     private let downloadManager: DownloadManager
@@ -21,11 +21,14 @@ class RecentEpisodesViewModel: ObservableObject {
     private let refreshLibraryUseCase: RefreshLibraryUseCase
     private let manualDownloadUseCase: ProcessManualDownloadUseCase
     private let setEpisodeAsListenedUseCase: SetEpisodeAsListenedUseCase
-    private let startPlayingEpisodeUseCase: StartPlayingEpisodeUseCase
+    private let playerVm: PlayerViewModel
+    private let loadEpisodesUseCase: LoadEpisodeUseCase
     
     private var cancellables = Set<AnyCancellable>()
+    var unlistenedEpisodes: [EpisodeRecord] = []
+    //@Binding var showFullPlayer: Bool
     
-    @Binding var showFullPlayer: Bool
+    //private let onTogglePlayer: (Bool) -> Void
 
     init(
         dataManager: DataManager,
@@ -33,60 +36,82 @@ class RecentEpisodesViewModel: ObservableObject {
         refreshLibraryUseCase: RefreshLibraryUseCase,
         processManualDownloadUseCase: ProcessManualDownloadUseCase,
         setEpisodeAsListenedUseCase: SetEpisodeAsListenedUseCase,
-        startPlayingEpisodeUseCase: StartPlayingEpisodeUseCase,
-        showFullPlayer: Binding<Bool>,
-        playbackManager: PlaybackManager
+        //showFullPlayer: Binding<Bool>,
+        playbackManager: PlaybackManager,
+        playerViewModel: PlayerViewModel,
+        loadEpisodesUseCase: LoadEpisodeUseCase,
+//        onTogglePlayer: @escaping (Bool) -> Void
     ) {
         self.dataManager = dataManager
         self.downloadManager = downloadManager
         self.refreshLibraryUseCase = refreshLibraryUseCase
         self.manualDownloadUseCase = processManualDownloadUseCase
         self.setEpisodeAsListenedUseCase = setEpisodeAsListenedUseCase
-        self.startPlayingEpisodeUseCase = startPlayingEpisodeUseCase
         self.playbackManager = playbackManager
-        self._showFullPlayer = showFullPlayer
+        //self.onTogglePlayer = onTogglePlayer
+        self.playerVm = playerViewModel
+        self.loadEpisodesUseCase = loadEpisodesUseCase
+        
+        //self._showFullPlayer = showFullPlayer
         
         // TODO Set the fetchable in here directly?
-        dataManager.$unlistenedEpisodes
-            .receive(on: RunLoop.main)
-            .sink { [weak self] newEpisodes in
-                self?.unlistenedEpisodes = newEpisodes
-            }
-            .store(in: &cancellables)
+        //self.unlistenedEpisodes = dataManager.unlistenedEpisodes
+        self.observeChanges()
+    }
+    
+    // Initial load
+    func loadEpisodes() async {
+        do {
+            unlistenedEpisodes = try await loadEpisodesUseCase.forUnlistened()
+        } catch {
+            print("Bad episode loading")
+        }
+    }
+    
+    // Watches and re-loads episodes
+    func observeChanges() {
+        NotificationCenter.default.addObserver(
+            forName: .NSManagedObjectContextDidSave,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { await self?.loadEpisodes() }
+        }
     }
 
     func refresh() async {
         await refreshLibraryUseCase.execute(notifyUser: false)
     }
     
-    func startManualDownload(_ episode: Episode, manualOverride: Bool) {
+    func startManualDownload(_ episode: EpisodeRecord, manualOverride: Bool) {
         manualDownloadUseCase.execute(for: episode, manualOverride: manualOverride)
     }
     
-    func manualDownloadSwipeAction(_ episode: Episode) {
+    func manualDownloadSwipeAction(_ episode: EpisodeRecord) {
         inFocusEpisode = episode
         
         if downloadManager.stopCellularDownload() {
             inFocusEpisode = episode
-            activeAlert = .cellularDownload
+            //activeAlert = .cellularDownload
         } else {
             startManualDownload(episode, manualOverride: false)
         }
     }
     
-    func episodeListenedSwipeAction(_ episode: Episode) async {
-        await setEpisodeAsListenedUseCase.execute(episode)
+    func episodeListenedSwipeAction(_ episode: EpisodeRecord) async {
+        let _ = await setEpisodeAsListenedUseCase.execute(episode.objectId)
     }
     
-    func selectEpisode(_ episode: Episode) {
-        showFullPlayer = true
+    func selectEpisode(_ episode: EpisodeRecord) async {
+        //onTogglePlayer(true)
+        await playerVm.selectEpisode(episode.objectId)
 //        playbackManager.loadEpisodeAndPlaylist(
 //            episode: episode,
 //            playlist: unlistenedEpisodes
-//        )
-        Task {
-            try await startPlayingEpisodeUseCase.execute(episodeId: episode.objectID)
-        }
+////        )
+//        Task {
+//            try await playbackUseCase.play(episodeId: episode.objectID)
+//        }
     }
 
 }

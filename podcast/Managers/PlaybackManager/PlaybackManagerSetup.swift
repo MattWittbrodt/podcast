@@ -30,8 +30,8 @@ extension PlaybackManager {
     
     private func setupNowPlayingInfo() {
         var nowPlayingInfo = [String: Any]()
-        nowPlayingInfo[MPMediaItemPropertyTitle] = currentEpisode?.title ?? "Episode Title"
-        nowPlayingInfo[MPMediaItemPropertyArtist] = currentEpisode?.podcast?.title ?? "Podcast Name"
+        nowPlayingInfo[MPMediaItemPropertyTitle] = currentEpisode?.episodeTitle ?? "Episode Title"
+        nowPlayingInfo[MPMediaItemPropertyArtist] = currentEpisode?.podcastTitle ?? "Podcast Name"
         nowPlayingInfo[MPMediaItemPropertyAlbumTitle] = "Album"
         
         // Set artwork if available
@@ -81,7 +81,7 @@ extension PlaybackManager {
         
         commandCenter.changePlaybackPositionCommand.addTarget { [weak self] event in
             if let event = event as? MPChangePlaybackPositionCommandEvent {
-                self?.seek(seconds: Int64(event.positionTime))
+                self?.seek(to: Double(event.positionTime))
             }
             return .success
         }
@@ -106,14 +106,14 @@ extension PlaybackManager {
         switch type {
             
         case .began:
-            player?.pause()
+            player.pause()
             isPlaying = false
             
         case .ended:
             guard let optionsValue = userInfo[AVAudioSessionInterruptionOptionKey] as? UInt else { return }
             let options = AVAudioSession.InterruptionOptions(rawValue: optionsValue)
             if options.contains(.shouldResume) {
-                player?.rate = self.playbackRate
+                player.rate = self.playbackRate
                 isPlaying = true
             }
         default: ()

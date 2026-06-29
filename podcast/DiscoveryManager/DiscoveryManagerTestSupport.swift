@@ -11,8 +11,8 @@ import Foundation
 extension DiscoveryManager {
     @MainActor
     static var preview: DiscoveryManager {
-        let pm = PersistenceManager(inMemory: true)
-        let dm = DataManager(persistence: pm, downloadManager: DownloadManager())
+        let pm = PersistenceController(inMemory: true)
+        let dm = DataManager(persistence: pm)
         let manager = DiscoveryManager(dataManager: dm)
         
         // Mock selected podcast

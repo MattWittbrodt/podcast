@@ -7,7 +7,7 @@
 
 import Foundation
 
-enum AlertType: Identifiable {
+enum AlertType: Identifiable, Equatable {
     case cellularDownload
 
     var id: String {

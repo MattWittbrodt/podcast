@@ -8,12 +8,20 @@
 import Foundation
 import CoreData
 
-final class PersistenceManager: ObservableObject {
+final class PersistenceController: ObservableObject {
+    static let shared = PersistenceController()
+    
     let container: NSPersistentContainer
     
     var viewContext: NSManagedObjectContext {
         container.viewContext
     }
+    
+    lazy var backgroundContext: NSManagedObjectContext = {
+        let ctx = container.newBackgroundContext()
+        ctx.mergePolicy = NSMergeByPropertyObjectTrumpMergePolicy
+        return ctx
+    }()
     
     init(inMemory: Bool = false) {
         self.container = NSPersistentContainer(name: "UserData")
@@ -35,7 +43,6 @@ final class PersistenceManager: ObservableObject {
             // Configure context
             self?.configureContext()
         }
-        printCoreDataLocation(container: self.container)
     }
     
     private func configureContext() {
