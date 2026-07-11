@@ -6,18 +6,19 @@
 //
 import CoreData
 
-class EpisodeRepository {
-    let dataManager: DataManager
+final class EpisodeRepository: Sendable {
     let downloadManager: DownloadManager
     private let context: NSManagedObjectContext
+    private let viewContext: NSManagedObjectContext
 
-    init(dataManager: DataManager,
-         context: NSManagedObjectContext,
-        downloadManager: DownloadManager
+    init(
+        context: NSManagedObjectContext,
+        downloadManager: DownloadManager,
+        viewContext: NSManagedObjectContext
     ) {
-        self.dataManager = dataManager
         self.context = context
         self.downloadManager = downloadManager
+        self.viewContext = viewContext
     }
     
     private func save() {
@@ -31,12 +32,12 @@ class EpisodeRepository {
     }
     
     func fetchUnlistened() async throws -> [EpisodeRecord] {
-        let cdEpisodes = try await dataManager.persistence.container.performBackgroundTask { context in
+        let cdEpisodes = try await self.context.perform {
             let request = Episode.fetchRequest()
             request.sortDescriptors = [NSSortDescriptor(keyPath: \Episode.publishedDate, ascending: false)]
             request.predicate = NSPredicate(format: "listened == false")
             
-            return try context.fetch(request)
+            return try self.context.fetch(request)
         }
             
         var episodes: [EpisodeRecord] = []
@@ -53,27 +54,16 @@ class EpisodeRepository {
     }
     
     @MainActor func getRecentEpisodesForEachPodcast(limit: Int) async -> [EpisodeRecord] {
-        // Checking for unlistened episodes that are not downloaded
-        let groupedByPodcast = Dictionary(grouping: dataManager.unlistenedEpisodes, by: { $0.podcast?.title ?? "Unknown Podcast" })
+        guard let episodes = try? await self.fetchUnlistened() else { return [] }
+        let groupedByPodcast = Dictionary(grouping: episodes, by: { $0.podcastTitle })
 
         // Map over each group to sort and take the top n
-        let topNEpisodes = groupedByPodcast.mapValues { episodes in
+        return groupedByPodcast.mapValues { episodes in
             episodes
                 .sorted { $0.publishedDate ?? .distantPast > $1.publishedDate ?? .distantPast}
                 .prefix(limit)
         }.values.flatMap { $0 }
         
-        var returnedEpisodes: [EpisodeRecord] = []
-        for episode in topNEpisodes {
-            guard let formatted = await self.fetchForPlayback(for: episode.objectID) else { continue }
-            returnedEpisodes.append(formatted)
-        }
-        
-        return returnedEpisodes
-    }
-    
-    @MainActor func getAllUnlistenedEpisodes() -> [Episode] {
-        return dataManager.unlistenedEpisodes
     }
     
     @MainActor func getUnlistenedEpisodesWithChapters() throws -> [Episode] {
@@ -86,17 +76,17 @@ class EpisodeRepository {
         )
         fetchRequest.predicate = compoundPredicate
         fetchRequest.sortDescriptors = [NSSortDescriptor(keyPath: \Episode.publishedDate, ascending: false)]
-        return try dataManager.persistence.viewContext.fetch(fetchRequest)
+        return try self.viewContext.fetch(fetchRequest)
     }
     
     func updateChapters(for episodeID: NSManagedObjectID, with chapterInfos: [ChapterInfo]) async throws {
         
         Task.detached {
             // Create a new, private context for this single transaction
-            let backgroundContext = await self.dataManager.persistence.container.newBackgroundContext()
+            //let backgroundContext = await self.dataManager.persistence.container.newBackgroundContext()
             
-            let needsUpdate = try await backgroundContext.perform {
-                guard let episodeInContext = backgroundContext.object(with: episodeID) as? Episode else {
+            let needsUpdate = try await self.context.perform {
+                guard let episodeInContext = self.context.object(with: episodeID) as? Episode else {
                     throw DataManagerError.episodeNotFound
                 }
                 // If chapter count is the same, no need to proceed with updates
@@ -107,9 +97,9 @@ class EpisodeRepository {
                 return // Chapters are already up-to-date, exit early
             }
                         
-            try await backgroundContext.perform {
+            try await self.context.perform {
                 // 1. Fetch the necessary parent object SAFELY in THIS context
-                guard let episodeInContext = backgroundContext.object(with: episodeID) as? Episode else {
+                guard let episodeInContext = self.context.object(with: episodeID) as? Episode else {
                     throw DataManagerError.episodeNotFound
                 }
                 
@@ -117,11 +107,11 @@ class EpisodeRepository {
                 print("removed chapters for: \(episodeInContext.title ?? "title missing")")
                 
                 for chapterInfo in chapterInfos {
-                    let chapter = Chapter.fromWeb(chapter: chapterInfo, context: backgroundContext)
+                    let chapter = Chapter.fromWeb(chapter: chapterInfo, context: self.context)
                     chapter.episode = episodeInContext
                 }
                 
-                try backgroundContext.save()
+                try self.context.save()
                 print("Successfully saved new chapters for: \(episodeInContext.title ?? "title missing")")
             }
         }
@@ -130,13 +120,13 @@ class EpisodeRepository {
     // Marks and episode as manually downloaded by user
     func markAsManuallyDownloaded(_ id: NSManagedObjectID) async {
         
-        await dataManager.persistence.container.performBackgroundTask { context in
-            guard let episode = try? context.existingObject(with: id) as? Episode else {
+        await self.context.perform {
+            guard let episode = try? self.context.existingObject(with: id) as? Episode else {
                 return
             }
             
             episode.manualDownload = true
-            try? context.save()
+            try? self.context.save()
         }
     }
     
@@ -173,13 +163,13 @@ class EpisodeRepository {
     // Updating the episode duration if the file exists
     func updateDurationFromFile(for episodeId: NSManagedObjectID, length: Int16) async {
         
-        await dataManager.persistence.container.performBackgroundTask { context in
-            guard let episode = try? context.existingObject(with: episodeId) as? Episode else {
+        await self.context.perform {
+            guard let episode = try? self.context.existingObject(with: episodeId) as? Episode else {
                 return
             }
             
             episode.duration = length
-            try? context.save()
+            try? self.context.save()
         }
     }
     
@@ -244,10 +234,10 @@ class EpisodeRepository {
     
     func updateLastListened(for id: NSManagedObjectID, time: Double) async {
         // 1. Spin up a temporary background thread context automatically
-        await dataManager.persistence.container.performBackgroundTask { backgroundContext in
+        await self.context.perform {
             
             // 2. Use the thread-safe ID to look up the object on THIS background thread
-            guard let backgroundEpisode = try? backgroundContext.existingObject(with: id) as? Episode else {
+            guard let backgroundEpisode = try? self.context.existingObject(with: id) as? Episode else {
                 return
             }
                         
@@ -255,15 +245,16 @@ class EpisodeRepository {
             backgroundEpisode.lastListened = time
             
             // 4. Save directly to the disk on the background thread
-            if backgroundContext.hasChanges {
-                try? backgroundContext.save()
+            if self.context.hasChanges {
+                try? self.context.save()
+                print("💾 saved lastListened — coordinator: \(self.context.persistentStoreCoordinator!)")
             }
         }
     }
     
     func getImageData(for id: NSManagedObjectID) async -> Data? {
-        await dataManager.persistence.container.performBackgroundTask { backgroundContext in
-            guard let backgroundEpisode = try? backgroundContext.existingObject(with: id) as? Episode else {
+        await self.context.perform {
+            guard let backgroundEpisode = try? self.context.existingObject(with: id) as? Episode else {
                 return nil
             }
             return backgroundEpisode.getImageData()
@@ -271,8 +262,8 @@ class EpisodeRepository {
     }
     
     func getChaptersForId(for id: NSManagedObjectID) async -> [ChapterRecord] {
-        await dataManager.persistence.container.performBackgroundTask { backgroundContext in
-            guard let backgroundEpisode = try? backgroundContext.existingObject(with: id) as? Episode else {
+        await self.context.perform {
+            guard let backgroundEpisode = try? self.context.existingObject(with: id) as? Episode else {
                 return []
             }
             
@@ -294,8 +285,8 @@ class EpisodeRepository {
         let chapters = await self.getChaptersForId(for: id)
         let imgData = await self.getImageData(for: id)
         
-        return await dataManager.persistence.container.performBackgroundTask { backgroundContext -> EpisodeRecord? in
-            guard let backgroundEpisode = try? backgroundContext.existingObject(with: id) as? Episode else {
+        return await self.context.perform {
+            guard let backgroundEpisode = try? self.context.existingObject(with: id) as? Episode else {
                 print("Cannot turn into episode record")
                 return nil
             }
@@ -328,4 +319,31 @@ class EpisodeRepository {
             )
         }
     }
+    
+    func fetchAllforPodcast(for podcastId: NSManagedObjectID) async -> [EpisodeRecord] {
+        var records: [EpisodeRecord] = []
+        let objectIDs = try? await self.context.perform {
+            guard let podcast = try? self.context.existingObject(with: podcastId) as? Podcast else {
+                throw RepositoryError.notFound
+            }
+            
+            let fetchRequest: NSFetchRequest<Episode> = Episode.fetchRequest()
+            fetchRequest.sortDescriptors = [NSSortDescriptor(keyPath: \Episode.publishedDate, ascending: false)]
+            fetchRequest.predicate = NSPredicate(format: "podcast == %@", podcast)
+            
+            return try self.context.fetch(fetchRequest).map { $0.objectID }
+        }
+        
+        guard let objectIDs = objectIDs else { return records }
+        
+        for id in objectIDs {
+            if let record = await self.fetchForPlayback(for: id) {
+                records.append(record)
+            }
+        }
+        return records
+    }
+    
+    
+    
 }

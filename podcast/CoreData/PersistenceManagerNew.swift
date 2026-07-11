@@ -34,6 +34,12 @@ final class PersistenceController: ObservableObject {
             container.persistentStoreDescriptions = [description]
         }
         
+        let description = container.persistentStoreDescriptions.first
+        description?.setOption(
+            true as NSNumber,
+            forKey: NSPersistentStoreRemoteChangeNotificationPostOptionKey
+        )
+        
         // Load stores
         container.loadPersistentStores { [weak self] description, error in
             if let error = error {

@@ -15,14 +15,11 @@ class PodcastListViewModel {
     
     var inFocusEpisode: Episode?
     //var activeAlert: AlertType?
-    
-    //private let dataManager: DataManager
     //private let downloadManager: DownloadManager
     
     private var cancellables = Set<AnyCancellable>()
     
     init(podcastRepository: PodcastRepository) {
-        //self.dataManager = dataManager
         //self.downloadManager = downloadManager
         Task {
             guard let podcasts = try? await podcastRepository.fetchAll() else { return }
@@ -32,9 +29,6 @@ class PodcastListViewModel {
     
     func unsuscribeFromPodcast(_ podcast: PodcastRecord) {
         //Podcast.delete(podcast: podcast)
-        //self.dataManager.saveMainContext()
-        //self.dataManager.refreshEpisodes()
-        //self.dataManager.refreshPodcasts()
     }
 
 }

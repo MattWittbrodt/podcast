@@ -9,41 +9,24 @@ import SwiftUI
 import CoreData
 
 struct RecentEpisodesList: View {
-    @State private var viewModel: RecentEpisodesViewModel
-    
-    // Global environment
+    @Environment(RecentEpisodesViewModel.self) var viewModel
     @EnvironmentObject private var themeManager: ThemeManager
     
     var activeAlert: AlertType?
-        
-    init(container: AppContainer) {
-                
-        self._viewModel = State(wrappedValue: RecentEpisodesViewModel(
-            dataManager: container.dataManager,
-            downloadManager: container.downloadManager,
-            refreshLibraryUseCase: container.refreshLibraryUseCase,
-            processManualDownloadUseCase: container.processManualDownloadUseCase,
-            setEpisodeAsListenedUseCase: container.setEpisodeAsListenedUseCase,
-            //showFullPlayer: showFullPlayer,
-            playbackManager: container.playbackManager,
-            playerViewModel: container.playerViewModel,
-            loadEpisodesUseCase: container.loadEpisodeUseCase,
-        ))
-    }
     
     var body: some View {
         NavigationStack {
             GeometryReader { geometry in
                 VStack(alignment: .leading, spacing: 16) {
                     header
-                    episodeList(in: geometry)
+                    episodeList(viewModel: viewModel, in: geometry)
                 }
-                    .padding(.horizontal)
-                }
-                .background(Color(themeManager.selectedTheme.secondoryColor))
-                .refreshable {
-                    await viewModel.refresh()
-                }
+                .padding(.horizontal)
+            }
+            .background(Color(themeManager.selectedTheme.secondoryColor))
+            .refreshable {
+                await viewModel.refresh()
+            }
         }
 //        .alert(
 //            viewModel.activeAlert?.id ?? "Alert",
@@ -78,7 +61,7 @@ struct RecentEpisodesList: View {
         .foregroundStyle(themeManager.selectedTheme.primaryColor)
     }
     
-    private func episodeList(in geometry: GeometryProxy) -> some View {
+    private func episodeList(viewModel: RecentEpisodesViewModel, in geometry: GeometryProxy) -> some View {
         List {
             ForEach(viewModel.unlistenedEpisodes, id: \.objectId) { episode in
                 EpisodeListCard(episode: episode)
@@ -123,12 +106,8 @@ struct RecentEpisodesList: View {
     }
 }
 
-//#Preview {
-//
-//    let previewContainer = PersistenceController.preview.container
-//
-//    RecentEpisodesList<MockPlayerViewModel>()
-//        .environment(\.managedObjectContext, PersistenceController.preview.container.viewContext)
-//        .environmentObject(MockPlayerViewModel(context: previewContainer.viewContext))
-//        .environmentObject(ThemeManager())
-//}
+#Preview {
+    RecentEpisodesList()
+        .environment(RecentEpisodesViewModel.preview)
+        .environmentObject(ThemeManager())
+}

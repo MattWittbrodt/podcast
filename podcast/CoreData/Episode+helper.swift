@@ -75,7 +75,6 @@ extension Episode {
     }
     
     static func nextEpisode(current: Episode) -> NSFetchRequest<Episode> {
-        let searchDate = current.publishedDate ?? Date.distantFuture
         let request = Episode.fetchRequest()
         request.sortDescriptors = [NSSortDescriptor(keyPath: \Episode.publishedDate, ascending: false)]
         request.predicate = NSComparisonPredicate(

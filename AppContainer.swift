@@ -13,7 +13,6 @@ final class AppContainer {
     
     let persistenceController: PersistenceController
     let backgroundContext: NSManagedObjectContext
-    let dataManager: DataManager
     let downloadManager: DownloadManager
     let settingsRepository: SettingsRepository
     let episodeRepository: EpisodeRepository
@@ -30,46 +29,46 @@ final class AppContainer {
     let subscribeToPodcastUseCase: SubscribeToPodcastUseCase
     let manageSettingsUseCase: ManageSettingsUseCase
     let playerViewModel: PlayerViewModel
+    let recentEpisodesViewModel: RecentEpisodesViewModel
     let discoveryManager: DiscoveryManager
     
     @MainActor
     init(persistenceController: PersistenceController = .shared) {
+        
         self.persistenceController = persistenceController
         self.backgroundContext = persistenceController.backgroundContext
         
         // MARK: Manager
-        self.dataManager = DataManager(persistence: persistenceController)
         self.downloadManager = DownloadManager()
         
         // MARK: - Repositories
-        self.settingsRepository = SettingsRepository(
-            dataManager: dataManager,
-            context: backgroundContext
-        )
+        self.settingsRepository = SettingsRepository(context: backgroundContext)
         
         self.episodeRepository = EpisodeRepository(
-            dataManager: dataManager,
             context: backgroundContext,
-            downloadManager: downloadManager
+            downloadManager: downloadManager,
+            viewContext: persistenceController.container.viewContext
         )
         
         self.podcastRepository = PodcastRepository(
-            dataManager: dataManager, context: backgroundContext
+            context: backgroundContext,
+            viewContext: persistenceController.container.viewContext
         )
         
         // MARK: Playback Manager
-        self.playbackManager = PlaybackManager(dataManager: dataManager, settingsRepository: settingsRepository)
+        self.playbackManager = PlaybackManager()
         
         // MARK: - Use Cases
         self.playbackUseCase = PlaybackUseCase(
             playbackManager: playbackManager,
-            downloadManager: downloadManager,
-            episodeRepository: episodeRepository
+            episodeRepository: episodeRepository,
+            settingsRepository: settingsRepository,
+            podcastRepository: podcastRepository
         )
         
         self.loadEpisodeUseCase = LoadEpisodeUseCase(
             episodeRepo: episodeRepository,
-            playbackUseCase: playbackUseCase,
+            playbackUseCase: playbackUseCase
         )
         
         self.syncPodcastUseCase = SyncPodcastUseCase(
@@ -89,7 +88,6 @@ final class AppContainer {
             syncUseCase: syncPodcastUseCase,
             manageDownloadsUseCase: manageDownloadsUseCase,
             updateChaptersUseCase: updateChaptersUseCase,
-            downloadManager: downloadManager,
             repository: podcastRepository,
         )
         
@@ -114,14 +112,26 @@ final class AppContainer {
         // MARK: - ViewModels
         self.playerViewModel = PlayerViewModel(
             useCase: manageSettingsUseCase,
-            pocastRepository: podcastRepository,
             playbackManager: playbackManager,
-            episodeRepository: episodeRepository,
             loadEpisodeUseCase: loadEpisodeUseCase,
-            setEpisodeAsListenedUseCase: setEpisodeAsListenedUseCase
+            setEpisodeAsListenedUseCase: setEpisodeAsListenedUseCase,
+            playbackUseCase: playbackUseCase
         )
         
-        self.discoveryManager = DiscoveryManager(dataManager: dataManager)
+        self.recentEpisodesViewModel = RecentEpisodesViewModel(
+            refreshLibraryUseCase: refreshLibraryUseCase,
+            processManualDownloadUseCase: processManualDownloadUseCase,
+            setEpisodeAsListenedUseCase: setEpisodeAsListenedUseCase,
+            playerViewModel: playerViewModel,
+            loadEpisodesUseCase: loadEpisodeUseCase,
+            manageDownloadsUseCase: manageDownloadsUseCase
+        )
+        
+        // Allows the observe changes for recent episodes to start observing with the coordinator
+        // all repositories use
+        recentEpisodesViewModel.observeChanges(coordinator: persistenceController.container.persistentStoreCoordinator)//
+        
+        self.discoveryManager = DiscoveryManager()
         
         BackgroundTaskManager.shared.refreshLibraryUseCase = refreshLibraryUseCase
     }

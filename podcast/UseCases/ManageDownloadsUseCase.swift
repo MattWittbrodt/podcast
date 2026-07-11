@@ -31,4 +31,8 @@ struct ManageDownloadsUseCase {
             }
         }
     }
+    
+    func episodeState(episode: EpisodeRecord) -> DownloadState {
+        return downloadManager.state(for: episode)
+    }
 }

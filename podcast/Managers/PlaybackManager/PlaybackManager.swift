@@ -13,8 +13,6 @@ import CoreData
 
 @Observable
 class PlaybackManager {
-    private let dataManager: DataManager
-    private var settingsRepository: SettingsRepository
     private let saveFrequency: TimeInterval = 5
     
     // Hook to allow Use Cases to listen for the end event
@@ -39,9 +37,7 @@ class PlaybackManager {
     var timeStream: AsyncStream<TimeInterval>?
     private var continuation: AsyncStream<TimeInterval>.Continuation?
     
-    init(dataManager: DataManager, settingsRepository: SettingsRepository) {
-        self.dataManager = dataManager
-        self.settingsRepository = settingsRepository
+    init() {
         setupAudioSession()
         setupPlaybackObservers()
         
@@ -81,7 +77,11 @@ class PlaybackManager {
             .store(in: &cancellables)
     }
     
-    func startPlayback(episode: EpisodeRecord) {
+    func startPlayback(
+        episode: EpisodeRecord,
+        forwardSkip: Int64,
+        backwardSkip: Int64
+    ) {
         self.cleanupPlayer()
         
         currentEpisode = episode
@@ -89,7 +89,6 @@ class PlaybackManager {
         
         let playerItem = AVPlayerItem(url: episode.audioUrl)
         player.replaceCurrentItem(with: playerItem)
-        //player = AVPlayer(playerItem: playerItem)
         
         Task { [weak self] in
                 guard let self else { return }
@@ -115,8 +114,7 @@ class PlaybackManager {
         player.play()
         player.rate = self.playbackRate
         isPlaying = true
-        //startProgressUpdates()
-        setupRemoteTransportControls()
+        setupRemoteTransportControls(backwardSkip: backwardSkip, forwardSkip: forwardSkip)
         
         setupNowPlayingInfo()
     }
@@ -204,7 +202,10 @@ extension PlaybackManager {
 
 //MARK: Command Center and NowPlayingInfo
 extension PlaybackManager {
-    private func setupRemoteTransportControls() {
+    private func setupRemoteTransportControls(
+        backwardSkip: Int64,
+        forwardSkip: Int64
+    ) {
         let commandCenter = MPRemoteCommandCenter.shared()
         
         // Remove previous targets to avoid duplicates
@@ -224,17 +225,17 @@ extension PlaybackManager {
             return .success
         }
         
-        commandCenter.skipBackwardCommand.preferredIntervals = [NSNumber(value: settingsRepository.settings.backwardSkip)]
+        commandCenter.skipBackwardCommand.preferredIntervals = [NSNumber(value: backwardSkip)]
         commandCenter.skipBackwardCommand.isEnabled = true
         commandCenter.skipBackwardCommand.addTarget { [weak self] _ in
-            self?.skipBackward(seconds: Int64(self?.settingsRepository.settings.backwardSkip ?? 30))
+            self?.skipBackward(seconds: Int64(backwardSkip))
             return .success
         }
         
-        commandCenter.skipForwardCommand.preferredIntervals = [NSNumber(value: 30)]//settingsRepository.settings.forwardSkip)]
+        commandCenter.skipForwardCommand.preferredIntervals = [NSNumber(value: forwardSkip)]
         commandCenter.skipForwardCommand.isEnabled = true
         commandCenter.skipForwardCommand.addTarget { [weak self] _ in
-            self?.skipForward(seconds: Int64(self?.settingsRepository.settings.forwardSkip ?? 30))
+            self?.skipForward(seconds: Int64(forwardSkip))
             return .success
         }
         

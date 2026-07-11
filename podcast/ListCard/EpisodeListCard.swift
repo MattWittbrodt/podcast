@@ -26,11 +26,13 @@ struct EpisodeListCardImage: View {
 }
 
 struct EpisodeListCard: View {
-    @EnvironmentObject var downloadManager: DownloadManager
+    @Environment(RecentEpisodesViewModel.self) private var viewModel
+    
     var episode: EpisodeRecord
     @State private var downloadState: DownloadState = .notDownloaded
     
     var body: some View {
+        let downloadState = viewModel.episodeDownloadState(episode)
         HStack{
             EpisodeListCardImage(imageData: episode.imgData)
             Spacer()
@@ -53,14 +55,6 @@ struct EpisodeListCard: View {
             }
         }
         .padding()
-        .onReceive(
-            downloadManager.downloadStatePublisher(
-                for: episode.objectId,
-                fileAlreadyExists: downloadManager.downloadFileExists(for: episode.savedFileName())
-            )
-        ) { state in
-            downloadState = state
-        }
     }
 }
 

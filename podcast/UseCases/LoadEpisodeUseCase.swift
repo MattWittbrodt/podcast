@@ -32,26 +32,7 @@ struct LoadEpisodeUseCase {
     }
     
     func forPodcast(_ podcastId: NSManagedObjectID) async throws -> [EpisodeRecord] {
-            
-        let objectIDs: [NSManagedObjectID] = try await episodeRepo.dataManager.persistence.container.performBackgroundTask { context in
-            guard let podcast = try? context.existingObject(with: podcastId) as? Podcast else {
-                throw RepositoryError.notFound
-            }
-            
-            let fetchRequest: NSFetchRequest<Episode> = Episode.fetchRequest()
-            fetchRequest.sortDescriptors = [NSSortDescriptor(keyPath: \Episode.publishedDate, ascending: false)]
-            fetchRequest.predicate = NSPredicate(format: "podcast == %@", podcast)
-            
-            return try context.fetch(fetchRequest).map { $0.objectID }
-        }
-        
-        var records: [EpisodeRecord] = []
-        for id in objectIDs {
-            if let record = await episodeRepo.fetchForPlayback(for: id) {
-                records.append(record)
-            }
-        }
-        return records
+        return await episodeRepo.fetchAllforPodcast(for: podcastId)
     }
     
     func forUnlistened() async throws -> [EpisodeRecord] {

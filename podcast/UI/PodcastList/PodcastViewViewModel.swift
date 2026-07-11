@@ -14,32 +14,24 @@ class PodcastViewModel {
     
     var episodes: [EpisodeRecord] = []
 
-    private let dataManager: DataManager
     private let downloadManager: DownloadManager
     private let playbackUseCase: PlaybackUseCase
     private let podcastRepository: PodcastRepository
     private let podcast: PodcastRecord
     private let loadEpisodeUseCase: LoadEpisodeUseCase
-    //var showFullPlayer: Bool
-    
-    //private var cancellables = Set<AnyCancellable>()
-    
+        
     init(
-        dataManager: DataManager,
         downloadManager: DownloadManager,
         playbackUseCase: PlaybackUseCase,
         podcast: PodcastRecord,
         podcastRepository: PodcastRepository,
         loadEpisodeUseCase: LoadEpisodeUseCase,
-        //showFullPlayer: Binding<Bool>
     ) {
-        self.dataManager = dataManager
         self.downloadManager = downloadManager
         self.playbackUseCase = playbackUseCase
         self.podcast = podcast
         self.podcastRepository = podcastRepository
         self.loadEpisodeUseCase = loadEpisodeUseCase
-        //self._showFullPlayer = showFullPlayer
     }
     
     func markAllListened() {
