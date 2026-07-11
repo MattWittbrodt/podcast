@@ -26,7 +26,6 @@ struct SyncPodcastUseCase {
         do {
             // 1. Fetch raw data (The Service just returns a 'Channel' struct)
             let channel = try await feedService.fetchChannel(for: url)
-                        
             // 2. Filter to find only new episodes
             // We do this on the MainActor because we are reading the podcast's episodes
             let newItems = await MainActor.run {
@@ -38,14 +37,9 @@ struct SyncPodcastUseCase {
             
             // 3. Get podcast image
             let podcastImage = await imageService.getImageData(from: channel.imageUrl)
-
             // 3. Update everything in one database transaction
-            await MainActor.run {
-                repository.updatePodcastRecord(podcastId, channel: channel, image: podcastImage)
-                Task {
-                    await repository.saveNewEpisodes(episodesWithImages, to: podcastId)
-                }
-            }
+            repository.updatePodcastRecord(podcastId, channel: channel, image: podcastImage)
+            await repository.saveNewEpisodes(episodesWithImages, to: podcastId)
             
             // After finishing - notify user
             if notifyUser {

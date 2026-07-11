@@ -16,8 +16,8 @@ struct DownloadData {
     let filePath: String
 }
 
-class DownloadManager: NSObject, ObservableObject, URLSessionDownloadDelegate {
-    //private let dataManager: DataManager
+@Observable
+class DownloadManager: NSObject, URLSessionDownloadDelegate {
     private let networkMonitor: NetworkMonitor = NetworkMonitor()
     
     // A closure that returns (EpisodeID, FinalFileUrl)
@@ -28,17 +28,13 @@ class DownloadManager: NSObject, ObservableObject, URLSessionDownloadDelegate {
     static let backgroundIdentifier = "com.planecast.Planecast"
     
     // The central hub for all state changes. It broadcasts a tuple: (Episode, new DownloadState)
-    //private let downloadStateSubject = PassthroughSubject<(NSManagedObjectID, DownloadState), Never>()
-    private var currentStates: [NSManagedObjectID: CurrentValueSubject<DownloadState, Never>] = [:]
+    //private var currentStates: [NSManagedObjectID: CurrentValueSubject<DownloadState, Never>] = [:]
+    var downloadStates: [NSManagedObjectID: DownloadState] = [:]
     
     // The Set acts as the real-time log of episode IDs currently being downloaded.
-    @Published var activeDownloads: Set<NSManagedObjectID> = []
+    var activeDownloads: Set<NSManagedObjectID> = []
     
-    private lazy var urlSession: URLSession = {
-        // Use the BACKGROUND configuration for robust, out-of-app downloads
-        let config = URLSessionConfiguration.background(withIdentifier: Self.backgroundIdentifier)
-        return URLSession(configuration: config, delegate: self, delegateQueue: nil)
-    }()
+    private var urlSession: URLSession!
     
     // Internal Mapping (needed for tracking task completion)
     private var taskMap: [Int: DownloadData] = [:]
@@ -64,13 +60,16 @@ class DownloadManager: NSObject, ObservableObject, URLSessionDownloadDelegate {
     
     override init() {
         // 1. Call the function/logic to get and create the directory
-        guard let url = DownloadManager.setupDownloadsDirectory() else {
+        guard let downloadsDirectory = DownloadManager.setupDownloadsDirectory() else {
             // 2. Handle the fatal error if the directory setup is mandatory
             fatalError("FATAL ERROR: Could not set up application downloads directory.")
         }
+        self.downloadsDirectory = downloadsDirectory
         
-        self.downloadsDirectory = url
         super.init()
+        
+        let config = URLSessionConfiguration.background(withIdentifier: Self.backgroundIdentifier)
+        self.urlSession = URLSession(configuration: config, delegate: self, delegateQueue: nil)
     }
 }
 
@@ -82,15 +81,27 @@ extension DownloadManager {
         return networkMonitor.isCellular && userDisabledCellular
     }
     
+    func validateDownload(at filePath: String) -> Bool {
+        let fileUrl = generateStoreFilePath(for: filePath)
+        let fileSize = (try? FileManager.default.attributesOfItem(atPath: fileUrl.path)[.size] as? Int) ?? 0
+        return fileSize > 100_000
+    }
+    
     func startDownload(for episode: EpisodeRecord, manualOverride: Bool = false) {
         // First, check if we can even download
         if stopCellularDownload() && !manualOverride {
             return
         }
         
-        guard !downloadFileExists(for: episode.savedFileName()), !activeDownloads.contains(episode.objectId)
-        else {
-            return
+        // Check that it is not currently being downloaded and the file exists + is valid
+        guard !activeDownloads.contains(episode.objectId) else { return }
+        if downloadFileExists(for: episode.savedFileName()) {
+            if !validateDownload(at: episode.savedFileName()) {
+                print("REMOVING: \(episode.episodeTitle)")
+                removeDownload(for: episode.savedFileName(), id: episode.objectId)
+            } else {
+                return
+            }
         }
         
         guard let epUrl = episode.enclosureUrl,
@@ -109,19 +120,14 @@ extension DownloadManager {
         
         task.resume()
     }
-     
-    func downloadStatePublisher(for episodeId: NSManagedObjectID, fileAlreadyExists: Bool) -> AnyPublisher<DownloadState, Never> {
-        
-        // 1. Get existing subject or create a new one with the initial value
-        let currentState = currentStates[episodeId] ?? {
-            let initialState = fileAlreadyExists ? DownloadState.downloaded : DownloadState.notDownloaded
-            let newSubject = CurrentValueSubject<DownloadState, Never>(initialState)
-            currentStates[episodeId] = newSubject
-            return newSubject
-        }()
-        
-        // 2. Just return it! New subscribers automatically get the current value first.
-        return currentState.eraseToAnyPublisher()
+    
+    func state(for episode: EpisodeRecord) -> DownloadState {
+        if let existing = downloadStates[episode.objectId] {
+            return existing
+        }
+        let initial: DownloadState = self.downloadFileExists(for: episode.savedFileName()) ? .downloaded : .notDownloaded
+        downloadStates[episode.objectId] = initial
+        return initial
     }
     
     func downloadFileExists(for path: String) -> Bool {
@@ -160,7 +166,7 @@ extension DownloadManager {
             }
         }
         // Afterwards, set all of current downloads to "not downloaded"
-        for episode in currentStates.keys {
+        for episode in downloadStates.keys {
             Task { @MainActor in
                 update(episodeId: episode, newState: .notDownloaded)
             }
@@ -273,29 +279,10 @@ extension DownloadManager {
 // MARK: Internal API
 extension DownloadManager {
     
-//    @MainActor
-//    private func update(episodeId: NSManagedObjectID, newState: DownloadState) {
-//        if let existingSubject = currentStates[episodeId] {
-//            // 1. Check for genuine change (CurrentValueSubject allows easy comparison)
-//            guard existingSubject.value != newState else { return }
-//            
-//            // 2. Updating .value automatically broadcasts to all subscribers
-//            existingSubject.value = newState
-//        } else {
-//            // 3. If no one is listening yet, create the subject with the new state
-//            currentStates[episodeId] = CurrentValueSubject<DownloadState, Never>(newState)
-//        }
-//    }
-    
     @MainActor
     private func update(episodeId: NSManagedObjectID, newState: DownloadState) {
-        // 1. Update the individual episode's publisher
-        if let existingSubject = currentStates[episodeId] {
-            guard existingSubject.value != newState else { return }
-            existingSubject.value = newState
-        } else {
-            currentStates[episodeId] = CurrentValueSubject<DownloadState, Never>(newState)
-        }
+        print("\(episodeId) - \(newState)")
+        downloadStates[episodeId] = newState
 
         // 2. Synchronize the "Active Downloads" set
         switch newState {

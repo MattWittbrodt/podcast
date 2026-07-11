@@ -15,13 +15,11 @@ struct PodcastView: View {
     init(podcast: PodcastRecord, container: AppContainer) {
         self.podcast = podcast
         self._viewModel = State(wrappedValue: PodcastViewModel(
-            dataManager: container.dataManager,
             downloadManager: container.downloadManager,
             playbackUseCase: container.playbackUseCase,
             podcast: podcast,
             podcastRepository: container.podcastRepository,
             loadEpisodeUseCase: container.loadEpisodeUseCase,
-            //showFullPlayer: showFullPlayer
         ))
     }
     

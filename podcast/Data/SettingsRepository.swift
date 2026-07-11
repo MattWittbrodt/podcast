@@ -8,12 +8,10 @@
 import CoreData
 
 class SettingsRepository {
-    let dataManager: DataManager
     var settings: UserSettings
     private let context: NSManagedObjectContext
 
-    init(dataManager: DataManager, context: NSManagedObjectContext) {
-        self.dataManager = dataManager
+    init(context: NSManagedObjectContext) {
         self.context = context
         
         // Populate with the most current setting upon load

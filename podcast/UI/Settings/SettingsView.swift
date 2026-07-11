@@ -29,7 +29,7 @@ enum SettingsAction: Identifiable {
 
 struct SettingsView: View {
     @EnvironmentObject private var themeManager: ThemeManager
-    @EnvironmentObject private var downloadManager: DownloadManager
+    @Environment(DownloadManager.self) private var downloadManager
     @State private var activeAction: SettingsAction?
     @State private var errorMessage: String?
     @State private var showError = false

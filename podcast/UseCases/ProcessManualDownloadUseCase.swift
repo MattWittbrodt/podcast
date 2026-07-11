@@ -11,7 +11,11 @@ struct ProcessManualDownloadUseCase {
     let downloadManager: DownloadManager
     let episodeRepository: EpisodeRepository
 
-    func execute(for episode: EpisodeRecord, manualOverride: Bool = false) {
+    func execute(for episode: EpisodeRecord, manualOverride: Bool = false) throws {
+        if downloadManager.stopCellularDownload() && !manualOverride {
+            throw DownloadError.cellularNotEnabled
+        }
+        
         // 1. Business Logic: Start the actual file transfer
         downloadManager.startDownload(for: episode, manualOverride: manualOverride)
         

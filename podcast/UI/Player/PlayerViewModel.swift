@@ -15,36 +15,32 @@ enum PlaybackPhase: Equatable {
     case loading
     case playing
     case paused
-    //case failed(Error)
 }
 
 @MainActor
 @Observable
 final class PlayerViewModel {
     private let useCase: ManageSettingsUseCase
-    private let podcastRepository: PodcastRepository
-    private let episodeRepository: EpisodeRepository
     private let playbackManager: PlaybackManager
     private let loadEpisodeUseCase: LoadEpisodeUseCase
     private let chapterPlaybackUseCase: ChapterPlaybackUseCase = ChapterPlaybackUseCase()
     private let setEpisodeAsListenedUseCase: SetEpisodeAsListenedUseCase
+    private let playbackUseCase: PlaybackUseCase
     
     var showFullPlayer: Bool = false
     
     init(
         useCase: ManageSettingsUseCase,
-        pocastRepository: PodcastRepository,
         playbackManager: PlaybackManager,
-        episodeRepository: EpisodeRepository,
         loadEpisodeUseCase: LoadEpisodeUseCase,
-        setEpisodeAsListenedUseCase: SetEpisodeAsListenedUseCase
+        setEpisodeAsListenedUseCase: SetEpisodeAsListenedUseCase,
+        playbackUseCase: PlaybackUseCase
     ) {
         self.useCase = useCase
-        self.podcastRepository = pocastRepository
         self.playbackManager = playbackManager
-        self.episodeRepository = episodeRepository
         self.loadEpisodeUseCase = loadEpisodeUseCase
         self.setEpisodeAsListenedUseCase = setEpisodeAsListenedUseCase
+        self.playbackUseCase = playbackUseCase
         
         startObservingTime()
     }
@@ -63,7 +59,7 @@ final class PlayerViewModel {
     }
     
     var backwardSkip: Int16 {
-        get { useCase.get(\UserSettings.forwardSkip) }
+        get { useCase.get(\UserSettings.backwardSkip) }
     }
     
     // Control of bar
@@ -108,7 +104,7 @@ final class PlayerViewModel {
                 guard let currentEpisode = currentEpisode else { continue }
                 // Triggering a save if the most recent timestamp is >5s away from previous
                 if abs(currentTime - lastListened) > 5  {
-                    await episodeRepository.updateLastListened(for: currentEpisode.objectId, time: time)
+                    await playbackUseCase.updateLastListened(for: currentEpisode, at: time)
                     lastListened = currentTime
                 }
                 // Checking for new chapter
@@ -166,26 +162,12 @@ final class PlayerViewModel {
     }
     
     func updateRate(_ rate: Float) {
-        playbackManager.updatePlaybackRate(rate)
         self.playbackRate = rate
-        if let episode = playbackManager.currentEpisode {
-            podcastRepository.updatePodcastRate(episode.objectId, rate: rate)
-        }
+        guard let episode = currentEpisode else { return }
+        playbackUseCase.updateRate(rate, for: episode)
     }
     
     func getCurrentEpisodeDescription() -> AttributedString? {
         return parseHTML(html: playbackManager.currentEpisode?.episodeDescription)
     }
-    
-//    private func processNewHTMLDescription(_ html: String?) {
-//        // Push the slow, CPU-heavy HTML string parsing entirely off the UI thread
-//        Task(priority: .userInitiated) {
-//            let parsedResult = self.parseHTML(html: html)
-//            
-//            // Send the finalized AttributedString safely back to the UI state
-//            await MainActor.run {
-//                self.currentEpisodeDescription = parsedResult
-//            }
-//        }
-//    }
 }

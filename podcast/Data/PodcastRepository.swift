@@ -6,13 +6,16 @@
 //
 import CoreData
 
-class PodcastRepository {
-    private let dataManager: DataManager
+final class PodcastRepository: Sendable {
     private let context: NSManagedObjectContext
+    private let viewContext: NSManagedObjectContext
 
-    init(dataManager: DataManager, context: NSManagedObjectContext) {
-        self.dataManager = dataManager
+    init(
+        context: NSManagedObjectContext,
+        viewContext: NSManagedObjectContext
+    ) {
         self.context = context
+        self.viewContext = viewContext
     }
     
     private func save() {
@@ -76,24 +79,13 @@ class PodcastRepository {
             save()
         }
     }
-
-    @MainActor
-    func saveNewEpisodes2(_ rssEpisodes: [RSSEpisode], to podcastId: NSManagedObjectID) {
-        guard let podcast = self.getObjectFromId(for: podcastId) else { return }
-    
-        rssEpisodes.forEach {
-            let _ = dataManager.saveEpisodeToPodcast($0, for: podcast)
-        }
-        
-        dataManager.saveMainContext()
-    }
     
     // 2. Perform the entire operation on a background context
     func saveNewEpisodes(_ rssEpisodes: [RSSEpisode], to podcastId: NSManagedObjectID) async {
-        await dataManager.persistence.container.performBackgroundTask { backgroundContext in
+        await context.perform {//}.persistence.container.performBackgroundTask { backgroundContext in
             
             // 3. Fetch the podcast localized to THIS background context
-            guard let backgroundPodcast = try? backgroundContext.existingObject(with: podcastId) as? Podcast else {
+            guard let backgroundPodcast = try? self.context.existingObject(with: podcastId) as? Podcast else {
                 return
             }
             
@@ -104,7 +96,7 @@ class PodcastRepository {
             }
             
             // 5. Save the background context changes so they merge up to the main context
-            try? backgroundContext.save()
+            try? self.context.save()
         }
     }
     
@@ -129,19 +121,13 @@ class PodcastRepository {
     @MainActor
     func filterNewItems(_ items: [RSSEpisode], for podcastID: NSManagedObjectID) -> [RSSEpisode] {
         // The Repository uses its internal dataManager to find the object
-        guard let podcast = try? dataManager.persistence.viewContext.existingObject(with: podcastID) as? Podcast else {
+        guard let podcast = try? self.viewContext.existingObject(with: podcastID) as? Podcast else {
             return []
         }
         
         let existingGuids = Set(podcast.episodesArray.map { $0.guid })
         let filtered = items.filter { !existingGuids.contains($0.guid) }
         return filtered
-    }
-    
-    // Finds all subscribed podcasts
-    @MainActor
-    func getAllSubscribedPodcasts() -> [Podcast] {
-        return self.dataManager.podcasts
     }
     
     // Creates a podcast from an RSS version
@@ -158,20 +144,17 @@ class PodcastRepository {
     }
     
     func markAllEpisodesAsListened(for podcastId: NSManagedObjectID) async throws {
-        let batchRequest = NSBatchUpdateRequest(entityName: "Episode")
-        batchRequest.predicate = NSPredicate(format: "podcast == %@", podcastId)
-        batchRequest.propertiesToUpdate = ["listened": true]
-        batchRequest.resultType = .updatedObjectIDsResultType
-        
-        let viewContext = self.context
-        
-        try await dataManager.persistence.container.performBackgroundTask { context in
-            let result = try context.execute(batchRequest) as? NSBatchUpdateResult
+        try await context.perform {
+            let batchRequest = NSBatchUpdateRequest(entityName: "Episode")
+            batchRequest.predicate = NSPredicate(format: "podcast == %@", podcastId)
+            batchRequest.propertiesToUpdate = ["listened": true]
+            batchRequest.resultType = .updatedObjectIDsResultType
+            let result = try self.context.execute(batchRequest) as? NSBatchUpdateResult
             let objectIDs = result?.result as? [NSManagedObjectID] ?? []
             
             NSManagedObjectContext.mergeChanges(
                 fromRemoteContextSave: [NSUpdatedObjectsKey: objectIDs],
-                into: [context, viewContext]
+                into: [self.context, self.viewContext]
             )
         }
     }

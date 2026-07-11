@@ -22,10 +22,7 @@ struct ContentView: View {
         ZStack(alignment: .bottom) {
             TabView {
                 Tab("Home", systemImage: "house") {
-                    RecentEpisodesList(
-                        container: container,
-                    )
-                    .environmentObject(themeManager)
+                    RecentEpisodesList()
                     //.toolbar(.visible, for: .tabBar)
                     //.toolbarBackground(.visible, for: .tabBar)
                 }
@@ -51,15 +48,14 @@ struct ContentView: View {
                        .toolbarBackground(.visible, for: .tabBar)
                 }
             }
-            .environment(container.dataManager)
-            .environment(container.playbackManager)
-            .environmentObject(container.downloadManager)
+            .environment(container.playerViewModel)
+            .environment(container.recentEpisodesViewModel)
+            .environment(container.downloadManager)
             .environmentObject(themeManager)
             .accentColor(Color(themeManager.selectedTheme.primaryColor))
             
             if container.playbackManager.currentEpisode != nil {
-                MiniPlayerView(showFullPlayer: $showFullPlayer)
-                    .environment(container.playbackManager)
+                MiniPlayerView()
                     .environment(container.playerViewModel)
                     .transition(.move(edge: .bottom))
                     .zIndex(1)

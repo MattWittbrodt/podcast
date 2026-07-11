@@ -33,7 +33,10 @@ struct EpisodeRecord: Equatable {
     let manualDownload: Bool
     
     static func == (lhs: EpisodeRecord, rhs: EpisodeRecord) -> Bool {
-        lhs.objectId == rhs.objectId
+        lhs.objectId == rhs.objectId &&
+        lhs.lastListened == rhs.lastListened &&
+        lhs.duration == rhs.duration &&
+        lhs.playbackRate == rhs.playbackRate
     }
 }
 
@@ -72,6 +75,35 @@ extension EpisodeRecord {
             // "Feb 4, 2025"
             return date.formatted(date: .abbreviated, time: .omitted)
         }
+    }
+}
+
+extension EpisodeRecord {
+    static var preview: EpisodeRecord {
+        
+        let context = PersistenceController.preview.container.viewContext
+        let episode = Episode(context: context)
+        episode.title = "Preview Episode"
+        episode.duration = 3600
+        episode.lastListened = 120
+        try? context.save()
+        
+        return EpisodeRecord(
+            objectId: episode.objectID,
+            episodeTitle: "Preview Episode",
+            podcastTitle: "Preview Podcast",
+            playbackRate: 1.0,
+            duration: 3600,
+            lastListened: 120,
+            episodeDescription: "Episode Description",
+            audioUrl: URL(string: "Sampleaudio")!,
+            chapters: [],
+            guid: "sampleGuid",
+            imgData: nil,
+            publishedDate: Date(),
+            enclosureUrl: "EnclosureUrl",
+            manualDownload: false,
+        )
     }
 }
 

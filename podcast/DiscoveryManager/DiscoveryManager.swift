@@ -14,11 +14,9 @@ class DiscoveryManager: ObservableObject {
     @Published var selectedPodcast: IdentifiablePodcast? = nil
     
     private let searchService: PodcastSearchService
-    private let dataManager: DataManager
     
-    init(searchService: PodcastSearchService = PodcastIndexAPI(), dataManager: DataManager) {
+    init(searchService: PodcastSearchService = PodcastIndexAPI()) {
         self.searchService = searchService
-        self.dataManager = dataManager
     }
 }
 
@@ -66,9 +64,7 @@ private extension DiscoveryManager {
             // Add image data
             let imgData = try? await loadImageFromWeb(url: channelFromRSS.imageUrl)
             channelFromRSS.podcastImageData = imgData
-            
-            print("after parsing: \(channelFromRSS.link)")
-            
+                        
             await MainActor.run {
                 self.rssChannel = channelFromRSS
             }

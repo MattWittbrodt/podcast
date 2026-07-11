@@ -242,3 +242,9 @@ struct PlayerNotesAndImage: View {
         }
     }
 }
+
+
+#Preview {
+    Player(viewModel: PlayerViewModel.preview)
+        .environmentObject(ThemeManager())
+}

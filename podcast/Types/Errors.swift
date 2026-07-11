@@ -7,6 +7,11 @@
 
 import Foundation
 
+enum DataManagerError: Error {
+    case episodeNotFound
+    case chapterCreationError(Error)
+}
+
 enum RepositoryError: LocalizedError {
     case notFound
 }
@@ -35,6 +40,7 @@ enum DownloadError: Error {
     case fileMoveFailed
     case downloadFailed(Error)
     case deleteFailed
+    case cellularNotEnabled
 }
 
 enum RSSParserError: Error {

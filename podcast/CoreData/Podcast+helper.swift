@@ -46,7 +46,7 @@ extension Podcast {
                   let episodes = podcast.episodes as? Set<Episode> else { return }
         
         for episode in episodes {
-            await Episode.handleListened(episode: episode)
+            let _ = await Episode.handleListened(episode: episode)
         }
         try? context.save()
     }

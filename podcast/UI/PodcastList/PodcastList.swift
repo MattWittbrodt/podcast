@@ -10,6 +10,7 @@ import SwiftUI
 struct PodcastList: View {
     @State private var viewModel: PodcastListViewModel
     @EnvironmentObject private var themeManager: ThemeManager
+    @Environment(PlayerViewModel.self) private var playerViewModel: PlayerViewModel
     @Binding var showFullPlayer: Bool
     
     private let container: AppContainer

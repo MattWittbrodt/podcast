@@ -12,13 +12,12 @@ struct RefreshLibraryUseCase {
     let syncUseCase: SyncPodcastUseCase
     let manageDownloadsUseCase: ManageDownloadsUseCase
     let updateChaptersUseCase: UpdateChaptersUseCase
-    let downloadManager: DownloadManager
     let repository: PodcastRepository
 
     func execute(notifyUser: Bool) async {
-        let podcastIDs = await MainActor.run {
-            return repository.getAllSubscribedPodcasts().map { $0.objectID }
-        }
+        let podcastIDs = try? await repository.fetchAll().map { $0.objectId }
+        
+        guard let podcastIDs else { return }
 
         // Syncing the basic episode information
         await withTaskGroup(of: Void.self) { group in
@@ -28,14 +27,8 @@ struct RefreshLibraryUseCase {
                 }
             }
         }
-        
-        // Update chapters
         await updateChaptersUseCase.execute()
-        
-        // Start downloads
         await manageDownloadsUseCase.execute()
-        
         UserDefaults.standard.set(Date(), forKey: "last_background_refresh_time")
-
     }
 }

@@ -8,19 +8,12 @@
 import SwiftUI
 
 struct MiniPlayerView: View {
-    @Environment(PlaybackManager.self) var playbackManager
     @Environment(PlayerViewModel.self) var playerViewModel
-    //@EnvironmentObject var settingsManager: SettingsManager
-    @Binding var showFullPlayer: Bool
-        
-    init(showFullPlayer: Binding<Bool>) {
-        self._showFullPlayer = showFullPlayer
-    }
     
     var body: some View {
         if let episode = playerViewModel.currentEpisode {
             Button(action: {
-                self.showFullPlayer = true
+                playerViewModel.showFullPlayer = true
             })
             {
                 HStack {
@@ -46,16 +39,16 @@ struct MiniPlayerView: View {
                     Spacer()
                     
                     Button(action: {
-                        playbackManager.playPause()
+                        playerViewModel.togglePlayPause()
                     }) {
-                        Image(systemName: playbackManager.isPlaying ? "pause.fill" : "play.fill")
+                        Image(systemName: playerViewModel.playButtonIcon)
                             .padding()
                             .imageScale(.large)
                             .fontWeight(.heavy)
                     }
                     
                     Button(action: {
-                        // Integrate settings
+                        // TODO: Integrate settings
                         playerViewModel.skipForward(by: Int64(30))
                     })
                     {
