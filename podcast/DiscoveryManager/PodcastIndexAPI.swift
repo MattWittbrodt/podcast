@@ -79,7 +79,14 @@ class PodcastIndexAPI: PodcastSearchService {
             throw SearcherError.invalidURL(term)
         }
         let request = self.createRequest(url: url)
-        let (data, response) = try await URLSession.shared.data(for: request)
+        
+        // Need a custom URL session to handle large data
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = 30.0
+        config.waitsForConnectivity = true
+        let customSession = URLSession(configuration: config)
+        
+        let (data, response) = try await customSession.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse,
               (200...299).contains(httpResponse.statusCode) else {
             throw SearcherError.invalidResponse("\(response)")

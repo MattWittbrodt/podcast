@@ -25,7 +25,7 @@ final class PlayerViewModel {
     private let loadEpisodeUseCase: LoadEpisodeUseCase
     private let chapterPlaybackUseCase: ChapterPlaybackUseCase = ChapterPlaybackUseCase()
     private let setEpisodeAsListenedUseCase: SetEpisodeAsListenedUseCase
-    private let playbackUseCase: PlaybackUseCase
+    private let playbackUseCase: PlaybackUseCaseProtocol
     
     var showFullPlayer: Bool = false
     
@@ -87,8 +87,8 @@ final class PlayerViewModel {
     
     // User actions to player manager
     func togglePlayPause() { playbackManager.playPause() }
-    func skipForward(by secs: Int64) { playbackManager.skipForward(seconds: secs) }
-    func skipBackward(by secs: Int64) { playbackManager.skipBackward(seconds: secs) }
+    func skipForward() { playbackManager.skipForward(seconds: Int64(self.forwardSkip)) }
+    func skipBackward() { playbackManager.skipBackward(seconds: Int64(self.backwardSkip)) }
     func finishedScrubbing() { playbackManager.seek(to: playbackManager.currentTime) }
     func seek(to time: Double) { playbackManager.seek(to: time)}
     func setIsSeeking(_ seeking: Bool) { playbackManager.isSeeking = seeking }
@@ -121,7 +121,7 @@ final class PlayerViewModel {
                 // Checking if this is now at episode end
                 if currentEpisode.duration - Int16(time) < 3, phase == .playing {
                     phase = .loading
-                    if let nextEpisode = await setEpisodeAsListenedUseCase.execute(currentEpisode.objectId) {
+                    if let nextEpisode = try? await setEpisodeAsListenedUseCase.execute(currentEpisode) {
                         await selectEpisode(nextEpisode.objectId)
                     }
                 }
@@ -159,6 +159,10 @@ final class PlayerViewModel {
         }
         phase = .playing
         showFullPlayer = true
+    }
+    
+    func playBookmark(_ bookmark: BookmarkRecord) {
+        playbackUseCase.play(bookmark: bookmark)
     }
     
     func updateRate(_ rate: Float) {

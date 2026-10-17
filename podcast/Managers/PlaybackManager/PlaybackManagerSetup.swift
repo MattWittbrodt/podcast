@@ -45,48 +45,6 @@ extension PlaybackManager {
         MPNowPlayingInfoCenter.default().nowPlayingInfo = nowPlayingInfo
     }
     
-    private func setupRemoteTransportControls() {
-        let commandCenter = MPRemoteCommandCenter.shared()
-        
-        // Remove previous targets to avoid duplicates
-        commandCenter.playCommand.removeTarget(nil)
-        commandCenter.pauseCommand.removeTarget(nil)
-        commandCenter.skipBackwardCommand.removeTarget(nil)
-        commandCenter.skipForwardCommand.removeTarget(nil)
-        commandCenter.changePlaybackPositionCommand.removeTarget(nil)
-        
-        commandCenter.playCommand.addTarget { [weak self] _ in
-            self?.playPause()
-            return .success
-        }
-        
-        commandCenter.pauseCommand.addTarget { [weak self] _ in
-            self?.playPause()
-            return .success
-        }
-        
-        commandCenter.skipForwardCommand.preferredIntervals = [30]
-        commandCenter.skipBackwardCommand.isEnabled = true
-        commandCenter.skipBackwardCommand.addTarget { [weak self] _ in
-            self?.skipBackward(seconds: 30)
-            return .success
-        }
-        
-        commandCenter.skipForwardCommand.preferredIntervals = [30]
-        commandCenter.skipForwardCommand.isEnabled = true
-        commandCenter.skipForwardCommand.addTarget { [weak self] _ in
-            self?.skipForward(seconds: 30)
-            return .success
-        }
-        
-        commandCenter.changePlaybackPositionCommand.addTarget { [weak self] event in
-            if let event = event as? MPChangePlaybackPositionCommandEvent {
-                self?.seek(to: Double(event.positionTime))
-            }
-            return .success
-        }
-    }
-    
     //MARK: Handle interruptions
     func setupNotifications() {
         let nc = NotificationCenter.default

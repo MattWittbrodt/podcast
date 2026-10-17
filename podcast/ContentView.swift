@@ -17,20 +17,20 @@ struct ContentView: View {
     @State private var showMiniPlayer = false
     @State private var updateMessage = ""
     @State private var selectedTab = 0
+    
+    // Need this
       
     var body: some View {
         ZStack(alignment: .bottom) {
             TabView {
                 Tab("Home", systemImage: "house") {
                     RecentEpisodesList()
-                    //.toolbar(.visible, for: .tabBar)
-                    //.toolbarBackground(.visible, for: .tabBar)
+                }
+                Tab("Bookmarks", systemImage: "bookmark.fill") {
+                    BookmarksView()
                 }
                 Tab("Podcasts", systemImage: "books.vertical") {
-                    PodcastList(
-                        container: container,
-                        showFullPlayer: $showFullPlayer
-                    )
+                    PodcastList()
                     .toolbar(.visible, for: .tabBar)
                     .toolbarBackground(.visible, for: .tabBar)
                 }
@@ -50,7 +50,10 @@ struct ContentView: View {
             }
             .environment(container.playerViewModel)
             .environment(container.recentEpisodesViewModel)
+            .environment(container.podcastListViewModel)
             .environment(container.downloadManager)
+            .environment(container.bookmarksViewModel)
+            .environment(container)
             .environmentObject(themeManager)
             .accentColor(Color(themeManager.selectedTheme.primaryColor))
             
@@ -65,16 +68,12 @@ struct ContentView: View {
         }
         .ignoresSafeArea(edges: .bottom)
         .sheet(isPresented: Bindable(container.playerViewModel).showFullPlayer) {
-            Player(viewModel: container.playerViewModel)
+            Player(
+                viewModel: container.playerViewModel,
+                bookmarksViewModel: container.bookmarksViewModel
+            )
                 .environmentObject(themeManager)
                 .presentationDragIndicator(.visible)
-        }
-        .onChange(of: scenePhase) { oldValue, newValue in
-            if newValue == .active {
-                Task {
-                    await container.refreshLibraryUseCase.execute(notifyUser: false)
-                }
-            }
         }
     }
 }

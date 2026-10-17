@@ -17,6 +17,8 @@
 		4F6431B22DE4BAFF00E0BE72 /* FeedKit in Frameworks */ = {isa = PBXBuildFile; productRef = 4F6431B12DE4BAFF00E0BE72 /* FeedKit */; };
 		4F6431B42DE4BAFF00E0BE72 /* XMLKit in Frameworks */ = {isa = PBXBuildFile; productRef = 4F6431B32DE4BAFF00E0BE72 /* XMLKit */; };
 		4FF1E49A2DFC5B5600F58106 /* backgroundRefresh.appex in Embed ExtensionKit Extensions */ = {isa = PBXBuildFile; fileRef = 4FF1E4922DFC5B5500F58106 /* backgroundRefresh.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		4FF52BDD300E9EEE00D16B8F /* XCTest.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4FF52BDC300E9EEE00D16B8F /* XCTest.framework */; platformFilter = ios; };
+		4FF52BDE300E9EEE00D16B8F /* XCTest.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 4FF52BDC300E9EEE00D16B8F /* XCTest.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -55,6 +57,17 @@
 			name = "Embed ExtensionKit Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		4FF52BDF300E9EEE00D16B8F /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				4FF52BDE300E9EEE00D16B8F /* XCTest.framework in Embed Frameworks */,
+			);
+			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
@@ -66,6 +79,7 @@
 		4FCE9FAC2D57A955000A5F15 /* podcastTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = podcastTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		4FCE9FB62D57A955000A5F15 /* podcastUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = podcastUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		4FF1E4922DFC5B5500F58106 /* backgroundRefresh.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.extensionkit-extension"; includeInIndex = 0; path = backgroundRefresh.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		4FF52BDC300E9EEE00D16B8F /* XCTest.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = XCTest.framework; path = Platforms/iPhoneOS.platform/Developer/Library/Frameworks/XCTest.framework; sourceTree = DEVELOPER_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -83,6 +97,13 @@
 			);
 			target = 4FF1E4912DFC5B5500F58106 /* backgroundRefresh */;
 		};
+		4FF52BF63027CBB100D16B8F /* Exceptions for "podcast" folder in "podcastTests" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				"Preview Content/sample.m4a",
+			);
+			target = 4FCE9FAB2D57A955000A5F15 /* podcastTests */;
+		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -90,6 +111,7 @@
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
 				4F5425FD2FC7EBB100E0581B /* Exceptions for "podcast" folder in "podcast" target */,
+				4FF52BF63027CBB100D16B8F /* Exceptions for "podcast" folder in "podcastTests" target */,
 			);
 			path = podcast;
 			sourceTree = "<group>";
@@ -129,6 +151,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				4FF52BDD300E9EEE00D16B8F /* XCTest.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -152,6 +175,7 @@
 		4FBFBB582DD83BCE00A82FF4 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				4FF52BDC300E9EEE00D16B8F /* XCTest.framework */,
 				4FBFBB592DD83BCE00A82FF4 /* A refined, minimalist vector logo for a French-inspired podcast app that fills the entire image. The design features a graceful, full-canvas abstract arch. This elegant arch, reminiscent of a classic French doorway, is integrated with subtl.png */,
 			);
 			name = Frameworks;
@@ -221,6 +245,7 @@
 				4FCE9FA82D57A955000A5F15 /* Sources */,
 				4FCE9FA92D57A955000A5F15 /* Frameworks */,
 				4FCE9FAA2D57A955000A5F15 /* Resources */,
+				4FF52BDF300E9EEE00D16B8F /* Embed Frameworks */,
 			);
 			buildRules = (
 			);

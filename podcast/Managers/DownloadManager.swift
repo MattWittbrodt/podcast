@@ -39,32 +39,15 @@ class DownloadManager: NSObject, URLSessionDownloadDelegate {
     // Internal Mapping (needed for tracking task completion)
     private var taskMap: [Int: DownloadData] = [:]
     
-    let downloadsDirectory: URL
-    
-    private static func setupDownloadsDirectory() -> URL? {
-        guard let groupURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: "group.com.planecast.Planecast") else {
-            print("not found group")
-            return nil
-        }
-        let downloadsURL = groupURL.appendingPathComponent("Downloads")
+    private let filePathService: FilePathService = FilePathService()
         
-        // Attempt to create the directory
-        do {
-            try FileManager.default.createDirectory(at: downloadsURL, withIntermediateDirectories: true)
-            return downloadsURL
-        } catch {
-            print("Error creating downloads directory: \(error.localizedDescription)")
-            return nil
-        }
-    }
-    
     override init() {
         // 1. Call the function/logic to get and create the directory
-        guard let downloadsDirectory = DownloadManager.setupDownloadsDirectory() else {
-            // 2. Handle the fatal error if the directory setup is mandatory
-            fatalError("FATAL ERROR: Could not set up application downloads directory.")
-        }
-        self.downloadsDirectory = downloadsDirectory
+//        guard let downloadsDirectory = DownloadManager.setupDownloadsDirectory() else {
+//            // 2. Handle the fatal error if the directory setup is mandatory
+//            fatalError("FATAL ERROR: Could not set up application downloads directory.")
+//        }
+//        self.downloadsDirectory = downloadsDirectory
         
         super.init()
         
@@ -81,9 +64,9 @@ extension DownloadManager {
         return networkMonitor.isCellular && userDisabledCellular
     }
     
-    func validateDownload(at filePath: String) -> Bool {
-        let fileUrl = generateStoreFilePath(for: filePath)
-        let fileSize = (try? FileManager.default.attributesOfItem(atPath: fileUrl.path)[.size] as? Int) ?? 0
+    func validateDownload(for episode: EpisodeRecord) -> Bool {
+        let url = filePathService.url(for: episode)
+        let fileSize = (try? FileManager.default.attributesOfItem(atPath: url.path)[.size] as? Int) ?? 0
         return fileSize > 100_000
     }
     
@@ -95,10 +78,9 @@ extension DownloadManager {
         
         // Check that it is not currently being downloaded and the file exists + is valid
         guard !activeDownloads.contains(episode.objectId) else { return }
-        if downloadFileExists(for: episode.savedFileName()) {
-            if !validateDownload(at: episode.savedFileName()) {
-                print("REMOVING: \(episode.episodeTitle)")
-                removeDownload(for: episode.savedFileName(), id: episode.objectId)
+        if filePathService.downloadFileExists(for: episode.savedFileName()) != nil {
+            if !validateDownload(for: episode) {
+                removeDownload(for: episode)
             } else {
                 return
             }
@@ -125,27 +107,18 @@ extension DownloadManager {
         if let existing = downloadStates[episode.objectId] {
             return existing
         }
-        let initial: DownloadState = self.downloadFileExists(for: episode.savedFileName()) ? .downloaded : .notDownloaded
+        let initial: DownloadState = filePathService.downloadFileExists(for: episode.savedFileName()) != nil ? .downloaded : .notDownloaded
         downloadStates[episode.objectId] = initial
         return initial
     }
     
-    func downloadFileExists(for path: String) -> Bool {
-        let episodePath = self.generateStoreFilePath(for: path)
-        return FileManager.default.fileExists(atPath: episodePath.path)
-    }
-    
-    func getFullDownloadPath(for path: String) -> URL {
-        return self.generateStoreFilePath(for: path)
-    }
-    
-    func removeDownload(for path: String, id: NSManagedObjectID) {
-        let episodePath = self.generateStoreFilePath(for: path)
+    func removeDownload(for episode: EpisodeRecord) {
+        let url = filePathService.url(for: episode)
         do {
-            if downloadFileExists(for: path) {
-                try FileManager.default.removeItem(at: episodePath)
+            if filePathService.downloadFileExists(for: url) {
+                try FileManager.default.removeItem(at: url)
                 Task { @MainActor in
-                    self.update(episodeId: id, newState: .notDownloaded)
+                    self.update(episodeId: episode.objectId, newState: .notDownloaded)
                 }
             }
         } catch {
@@ -155,7 +128,7 @@ extension DownloadManager {
     
     // Deletes specified MP3 files
     func deleteMp3Files() async throws {
-        let files = findAllMP3sInDownloads()
+        let files = filePathService.findAllMP3sInDownloads()
         let fileManager = FileManager.default
         
         await withThrowingTaskGroup { group in
@@ -175,9 +148,9 @@ extension DownloadManager {
     
     // Finds actual download length (vs whats in RSS)
     func getActualFileLength(for episode: EpisodeRecord) async -> Int16? {
-        let episodePath = self.generateStoreFilePath(for: episode.savedFileName())
+        let episodeUrl = filePathService.url(for: episode)
         
-        let asset = AVURLAsset(url: episodePath)
+        let asset = AVURLAsset(url: episodeUrl)
         do {
             let durationCMTime = try await asset.load(.duration)
             let durationSeconds = CMTimeGetSeconds(durationCMTime)
@@ -199,7 +172,7 @@ extension DownloadManager {
     // Called when the network transfer has finished and we need to handle result
     func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didFinishDownloadingTo location: URL) {
         guard let downloadData = taskMap[downloadTask.taskIdentifier] else { return }
-        let destinationURL = generateStoreFilePath(for: downloadData.filePath)
+        let destinationURL = filePathService.url(for: downloadData.filePath)
         
         let fm = FileManager.default
         if fm.fileExists(atPath: destinationURL.path) {
@@ -292,40 +265,7 @@ extension DownloadManager {
             activeDownloads.remove(episodeId)
         }
     }
-    
-    func generateStoreFilePath(for savedFileName: String) -> URL {
-        let fileName = "\(savedFileName).mp3"
-        let sanitizedFileName = sanitizeFileName(fileName)
-        return self.downloadsDirectory.appendingPathComponent(sanitizedFileName)
-    }
-    
-    private func sanitizeFileName(_ fileName: String) -> String {
-        // Define characters that are illegal in file paths
-        let illegalChars = CharacterSet(charactersIn: "/\\?%*|\"<>:")
-        
-        // Split the string by illegal characters and rejoin them
-        let components = fileName.components(separatedBy: illegalChars)
-        
-        // Join with an underscore or dash
-        return components.joined(separator: "_")
-    }
-    
-    // Finds all .mp3 files in Downloads directory
-    func findAllMP3sInDownloads() -> [URL] {
-        let fileManager = FileManager.default
-        
-        do {
-            let directoryContents = try fileManager.contentsOfDirectory(
-                at: downloadsDirectory,
-                includingPropertiesForKeys: nil,
-                options: []
-            )
-            return directoryContents.filter { $0.pathExtension == "mp3" }
-        } catch {
-            print("Error finding MP3s: \(error)")
-            return []
-        }
-    }
+
 }
 
 enum DownloadState {

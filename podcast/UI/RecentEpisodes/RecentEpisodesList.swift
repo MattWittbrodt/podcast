@@ -23,7 +23,7 @@ struct RecentEpisodesList: View {
                 }
                 .padding(.horizontal)
             }
-            .background(Color(themeManager.selectedTheme.secondoryColor))
+            .background(Color(themeManager.selectedTheme.secondaryColor))
             .refreshable {
                 await viewModel.refresh()
             }
@@ -64,21 +64,24 @@ struct RecentEpisodesList: View {
     private func episodeList(viewModel: RecentEpisodesViewModel, in geometry: GeometryProxy) -> some View {
         List {
             ForEach(viewModel.unlistenedEpisodes, id: \.objectId) { episode in
-                EpisodeListCard(episode: episode)
-                    .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
-                    .listRowBackground(Color.clear)
-                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                EpisodeListCard(
+                    episode: episode,
+                    downloadState: viewModel.episodeDownloadState(episode)
+                )
+                .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
+                .listRowBackground(Color.clear)
+                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                         swipeActions(for: episode)
+                }
+                .onTapGesture {
+                    Task {
+                        await viewModel.selectEpisode(episode)
                     }
-                    .onTapGesture {
-                        Task {
-                            await viewModel.selectEpisode(episode)
-                        }
-                    }
+                }
             }
         }
         .listStyle(.plain)
-        .background(themeManager.selectedTheme.secondoryColor)
+        .background(themeManager.selectedTheme.secondaryColor)
         .scrollContentBackground(.hidden)
         .task { await viewModel.loadEpisodes() }
     }

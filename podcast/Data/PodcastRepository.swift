@@ -158,6 +158,16 @@ final class PodcastRepository: Sendable {
             )
         }
     }
+    
+    func deletePodcast(_ podcastId: NSManagedObjectID) async throws {
+        try await context.perform {
+            guard let podcast = try? self.context.existingObject(with: podcastId) as? Podcast else { return }
+            self.context.delete(podcast)
+            if self.context.hasChanges {
+                try self.context.save()
+            }
+        }
+    }
 }
 
 // Handles checks for equivalency

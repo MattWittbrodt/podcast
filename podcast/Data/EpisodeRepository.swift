@@ -6,8 +6,28 @@
 //
 import CoreData
 
-final class EpisodeRepository: Sendable {
-    let downloadManager: DownloadManager
+protocol EpisodeRepositoryProtocol: Sendable {
+    func fetchForPlayback(for id: NSManagedObjectID) async -> EpisodeRecord?
+    func fetchUnlistened() async throws -> [EpisodeRecord]
+    func updateLastListened(for id: NSManagedObjectID, time: Double) async
+    func getImageData(for id: NSManagedObjectID) async -> Data?
+    func fetchAllforPodcast(for podcastId: NSManagedObjectID) async -> [EpisodeRecord]
+    func getRecentEpisodesForEachPodcast(limit: Int) async -> [EpisodeRecord]
+    func getEpisode(for id: NSManagedObjectID) -> Episode?
+    func getUnlistenedEpisodesWithChapters() throws -> [Episode]
+    func updateChapters(for episodeID: NSManagedObjectID, with chapterInfos: [ChapterInfo]) async throws
+    func markAsManuallyDownloaded(_ id: NSManagedObjectID) async
+    func markEpisodeAsListened(_ id: NSManagedObjectID)
+    func markEpisodeAsUnlistened(_ episode: Episode)
+    func updateDurationFromFile(for episodeId: NSManagedObjectID, length: Int16) async
+    func importEpisodes(from channel: RSSChannel, for podcastID: NSManagedObjectID) async throws -> EpisodeRecord?
+    func fetchNextEpisode(after episodeID: NSManagedObjectID) async throws -> EpisodeRecord?
+    func getChaptersForId(for id: NSManagedObjectID) async -> [ChapterRecord]
+}
+
+final class EpisodeRepository: EpisodeRepositoryProtocol, Sendable {
+    private let downloadManager: DownloadManager
+    private let filePathService: FilePathService = FilePathService()
     private let context: NSManagedObjectContext
     private let viewContext: NSManagedObjectContext
 
@@ -48,7 +68,6 @@ final class EpisodeRepository: Sendable {
         return episodes
     }
     
-    @MainActor
     func getEpisode(for id: NSManagedObjectID) -> Episode? {
         return try? context.existingObject(with: id) as? Episode
     }
@@ -63,7 +82,6 @@ final class EpisodeRepository: Sendable {
                 .sorted { $0.publishedDate ?? .distantPast > $1.publishedDate ?? .distantPast}
                 .prefix(limit)
         }.values.flatMap { $0 }
-        
     }
     
     @MainActor func getUnlistenedEpisodesWithChapters() throws -> [Episode] {
@@ -247,7 +265,6 @@ final class EpisodeRepository: Sendable {
             // 4. Save directly to the disk on the background thread
             if self.context.hasChanges {
                 try? self.context.save()
-                print("💾 saved lastListened — coordinator: \(self.context.persistentStoreCoordinator!)")
             }
         }
     }
@@ -285,15 +302,15 @@ final class EpisodeRepository: Sendable {
         let chapters = await self.getChaptersForId(for: id)
         let imgData = await self.getImageData(for: id)
         
-        return await self.context.perform {
-            guard let backgroundEpisode = try? self.context.existingObject(with: id) as? Episode else {
+        return await self.context.perform { () -> EpisodeRecord?
+            in guard let backgroundEpisode = try? self.context.existingObject(with: id) as? Episode else {
                 print("Cannot turn into episode record")
                 return nil
             }
             
             var audioUrl: URL
-            if self.downloadManager.downloadFileExists(for: backgroundEpisode.savedFileName()) {
-                audioUrl = self.downloadManager.getFullDownloadPath(for: backgroundEpisode.savedFileName())
+            if self.filePathService.downloadFileExists(for: backgroundEpisode.savedFileName()) != nil {
+                audioUrl = self.filePathService.url(for: backgroundEpisode.savedFileName())
             } else if let remoteUrlString = backgroundEpisode.enclosureUrl,
                       let remoteUrl = URL(string: remoteUrlString) {
                 audioUrl = remoteUrl

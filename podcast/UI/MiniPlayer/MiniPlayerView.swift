@@ -49,7 +49,7 @@ struct MiniPlayerView: View {
                     
                     Button(action: {
                         // TODO: Integrate settings
-                        playerViewModel.skipForward(by: Int64(30))
+                        playerViewModel.skipForward()
                     })
                     {
                         Image(systemName: "\(30).arrow.trianglehead.clockwise")
@@ -59,7 +59,7 @@ struct MiniPlayerView: View {
                 }
                 .padding(.horizontal)
                 .frame(height: 60)
-                .background(Color(ThemeManager().selectedTheme.secondoryColor).opacity(0.9))
+                .background(Color(ThemeManager().selectedTheme.secondaryColor).opacity(0.9))
                 .cornerRadius(8)
                 .shadow(radius: 2)
             }

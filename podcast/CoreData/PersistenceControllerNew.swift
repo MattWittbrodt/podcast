@@ -11,8 +11,17 @@ import CoreData
 final class PersistenceController: ObservableObject {
     static let shared = PersistenceController()
     
-    let container: NSPersistentContainer
+    // Load the model ONE time, ever, no matter how many PersistenceControllers get created
+    static let model: NSManagedObjectModel = {
+        guard let url = Bundle(for: PersistenceController.self).url(forResource: "UserData", withExtension: "momd")
+                ?? Bundle.main.url(forResource: "UserData", withExtension: "momd"),
+              let model = NSManagedObjectModel(contentsOf: url) else {
+            fatalError("Failed to load Core Data model")
+        }
+        return model
+    }()
     
+    let container: NSPersistentContainer
     var viewContext: NSManagedObjectContext {
         container.viewContext
     }
@@ -24,13 +33,11 @@ final class PersistenceController: ObservableObject {
     }()
     
     init(inMemory: Bool = false) {
-        self.container = NSPersistentContainer(name: "UserData")
+        self.container = NSPersistentContainer(name: "UserData", managedObjectModel: Self.model)
         self.container.viewContext.mergePolicy = NSMergeByPropertyStoreTrumpMergePolicy
         
         if inMemory {
-            let description = NSPersistentStoreDescription()
-            description.type = NSInMemoryStoreType
-            description.url = URL(fileURLWithPath: "/dev/null")
+            let description = NSPersistentStoreDescription(url: URL(fileURLWithPath: "/dev/null"))
             container.persistentStoreDescriptions = [description]
         }
         

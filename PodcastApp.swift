@@ -15,10 +15,12 @@ struct PodcastApp: App {
     @State private var container = AppContainer()
     
     init() {
+        log("App launched")
         setupSharedDirectory()
         UserDefaults.standard.set(0, forKey: "com.apple.CoreData.SQLDebug")
         UserDefaults.standard.set(0, forKey: "com.apple.CoreData.ConcurrencyDebug")
         BackgroundTaskManager.shared.registerBackgroundTask()
+        print("container: \(URL.documentsDirectory.path)")
     }
     
     var body: some Scene {
@@ -31,9 +33,8 @@ struct PodcastApp: App {
                 }
         }
         .onChange(of: scenePhase) { oldPhase, newPhase in
+            log("windowgroup scenePhase changed to \(newPhase)")
             if newPhase == .background {
-                print("New background")
-                // 3. Schedule the task as the user leaves the app
                 BackgroundTaskManager.shared.scheduleAppRefresh()
             }
         }

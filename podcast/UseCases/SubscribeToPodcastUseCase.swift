@@ -6,13 +6,14 @@
 //
 
 import Foundation
+import CoreData
 
 struct SubscribeToPodcastUseCase {
     let podcastRepository: PodcastRepository
     let episodeRepository: EpisodeRepository
     let downloadManager: DownloadManager
     
-    func execute(podcastDetail: PodcastDetailDestination) async {
+    func subscribe(podcastDetail: PodcastDetailDestination) async {
         let podcast = podcastRepository.createPodcastFromWeb(
             channel: podcastDetail.channel,
             feedUrl: podcastDetail.podcast.podcast.rssUrl()
@@ -28,6 +29,10 @@ struct SubscribeToPodcastUseCase {
         } catch {
             print("Error adding episodes for \(podcast.title): \(error)")
         }
+    }
+    
+    func unsubscribe(_ id: NSManagedObjectID) async throws {
+        try await podcastRepository.deletePodcast(id)
     }
     
 }

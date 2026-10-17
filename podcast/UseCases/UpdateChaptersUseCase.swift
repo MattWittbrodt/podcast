@@ -8,7 +8,7 @@
 import CoreData
 
 struct UpdateChaptersUseCase {
-    let repository: EpisodeRepository
+    let repository: EpisodeRepositoryProtocol
     let feedService = PodcastFeedService()
     let imageService = ImageService()
 

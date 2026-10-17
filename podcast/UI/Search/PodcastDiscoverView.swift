@@ -45,7 +45,7 @@ struct PodcastDiscoverView: View {
                 .lineLimit(4)
             Button {
                 Task {
-                    await subscribeUseCase.execute(podcastDetail: podcastDetail)
+                    await subscribeUseCase.subscribe(podcastDetail: podcastDetail)
                 }
             }
             label: {

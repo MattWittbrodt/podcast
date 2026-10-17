@@ -10,25 +10,38 @@ import CoreData
 
 struct SetEpisodeAsListenedUseCase {
     let downloadManager: DownloadManager
-    let episodeRepository: EpisodeRepository
+    let episodeRepository: EpisodeRepositoryProtocol
+    let bookmarkRepository: BookmarkRepositoryProtocol
+    let createBookmarkClipUseCase: CreateBookmarkClipUseCaseProtocol
+    
+    static let clipDuration: TimeInterval = 180
 
-    func execute(_ episodeId: NSManagedObjectID) async -> EpisodeRecord? {
-        guard let episode = await episodeRepository.getEpisode(for: episodeId) else { return nil }
+    func execute(_ episode: EpisodeRecord) async throws -> EpisodeRecord? {
+        // First, clip bookmarks before removing download
+        do {
+            let bookmarks = try await bookmarkRepository.fetchAll(for: episode.objectId)
+            for bookmark in bookmarks {
+                try await createBookmarkClipUseCase.execute(
+                    episode: episode,
+                    bookmark: bookmark,
+                    duration: Self.clipDuration
+                )
+            }
+        } catch {
+            print("bookmarks clipping failed: \(error)")
+            if let nsError = error as NSError? {
+                    print("domain: \(nsError.domain) code: \(nsError.code)")
+                    print("userInfo: \(nsError.userInfo)")
+                    if let underlying = nsError.userInfo[NSUnderlyingErrorKey] as? NSError {
+                        print("underlying: \(underlying.domain) \(underlying.code)")
+                    }
+                }
+        }
         
-        await episodeRepository.markEpisodeAsListened(episodeId)
-        downloadManager.removeDownload(for: episode.savedFileName(), id: episodeId)
+        episodeRepository.markEpisodeAsListened(episode.objectId)
+        downloadManager.removeDownload(for: episode)
 
         // Only start playing next episode if the one marked as played is currently playing
-        return try? await episodeRepository.fetchNextEpisode(after: episode.objectID)
-//        if episode.objectID == currentPlayingID {
-//            do {
-//                let nextEpisode = try await episodeRepository.fetchNextEpisode(after: episode.objectID)
-//                if let nextEpisode = nextEpisode {
-//                    try await playbackUseCase.play(episode: nextEpisode)
-//                }
-//            } catch {
-//                print("Failed to end episode")
-//            }
-//        }
+        return try? await episodeRepository.fetchNextEpisode(after: episode.objectId)
     }
 }

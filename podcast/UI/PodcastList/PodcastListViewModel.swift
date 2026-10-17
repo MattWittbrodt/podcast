@@ -12,23 +12,26 @@ import Combine
 @Observable
 class PodcastListViewModel {
     var podcasts: [PodcastRecord] = []
-    
     var inFocusEpisode: Episode?
-    //var activeAlert: AlertType?
-    //private let downloadManager: DownloadManager
+    let subscribeToPodcastUseCase: SubscribeToPodcastUseCase
+    let manageDownloadsUseCase: ManageDownloadsUseCase
     
     private var cancellables = Set<AnyCancellable>()
     
-    init(podcastRepository: PodcastRepository) {
-        //self.downloadManager = downloadManager
+    init(
+        podcastRepository: PodcastRepository,
+        subscribeToPodcastUseCase: SubscribeToPodcastUseCase,
+        manageDownloadsUseCase: ManageDownloadsUseCase
+    ) {
+        self.subscribeToPodcastUseCase = subscribeToPodcastUseCase
+        self.manageDownloadsUseCase = manageDownloadsUseCase
         Task {
             guard let podcasts = try? await podcastRepository.fetchAll() else { return }
             self.podcasts = podcasts
         }
     }
     
-    func unsuscribeFromPodcast(_ podcast: PodcastRecord) {
-        //Podcast.delete(podcast: podcast)
+    func unsuscribeFromPodcast(_ podcast: PodcastRecord) async {
+        try? await subscribeToPodcastUseCase.unsubscribe(podcast.objectId)
     }
-
 }

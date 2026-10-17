@@ -8,11 +8,12 @@
 import Foundation
 
 struct ManageDownloadsUseCase {
-    let repository: EpisodeRepository
+    let repository: EpisodeRepositoryProtocol
     let downloadManager: DownloadManager
 
     func execute() async {
         let episodesToKeep = await repository.getRecentEpisodesForEachPodcast(limit: 3)
+        let keepIds = Set(episodesToKeep.map(\.objectId))
         
         // Start auto-downloads
         for episode in episodesToKeep {
@@ -26,8 +27,8 @@ struct ManageDownloadsUseCase {
         // ONLY remove if it's NOT in the 'keep' list AND NOT a 'manual' download
         guard let allUnlistened = try? await repository.fetchUnlistened() else { return }
         for episode in allUnlistened {
-            if !episodesToKeep.contains(episode) && !episode.manualDownload {
-                downloadManager.removeDownload(for: episode.savedFileName(), id: episode.objectId)
+            if !keepIds.contains(episode.objectId) && !episode.manualDownload {
+                downloadManager.removeDownload(for: episode)
             }
         }
     }

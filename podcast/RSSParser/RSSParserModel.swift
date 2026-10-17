@@ -17,13 +17,41 @@ actor RSSFeedParser {
         return try await parse(xmlData: data)
     }
     
+//    func parse(xmlData: Data) async throws -> RSSChannel {
+//        try await withCheckedThrowingContinuation { continuation in
+//            let parser = XMLParser(data: xmlData)
+//            parser.shouldProcessNamespaces = true
+//            parser.shouldReportNamespacePrefixes = true
+//            let delegate = ParserDelegate(dateFormatter: dateFormatter) { result in
+//                continuation.resume(with: result)
+//            }
+//            parser.delegate = delegate
+//            parser.parse()
+//        }
+//    }
+    
     func parse(xmlData: Data) async throws -> RSSChannel {
         try await withCheckedThrowingContinuation { continuation in
+            var didResume = false
+            let lock = NSLock()
+
+            func safeResume(_ result: Result<RSSChannel, Error>, file: StaticString = #fileID, line: UInt = #line) {
+                lock.lock()
+                defer { lock.unlock() }
+                guard !didResume else {
+                    print("⚠️ Duplicate continuation resume attempted at \(file):\(line) — ignoring")
+                    return
+                }
+                didResume = true
+                continuation.resume(with: result)
+            }
+
             let parser = XMLParser(data: xmlData)
             parser.shouldProcessNamespaces = true
             parser.shouldReportNamespacePrefixes = true
+
             let delegate = ParserDelegate(dateFormatter: dateFormatter) { result in
-                continuation.resume(with: result)
+                safeResume(result)
             }
             parser.delegate = delegate
             parser.parse()

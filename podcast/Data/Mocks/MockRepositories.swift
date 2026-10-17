@@ -10,7 +10,7 @@ import Foundation
 #if DEBUG
 
 extension EpisodeRepository {
-    static var preview: EpisodeRepository {
+    static var preview: EpisodeRepositoryProtocol {
         EpisodeRepository(
             context: PersistenceController.preview.backgroundContext,
             downloadManager: DownloadManager(),
@@ -31,6 +31,12 @@ extension PodcastRepository {
 extension SettingsRepository {
     static var preview: SettingsRepository {
         SettingsRepository(context: PersistenceController.preview.backgroundContext)
+    }
+}
+
+extension BookmarkRepository {
+    static var preview: BookmarkRepositoryProtocol {
+        BookmarkRepository(context: PersistenceController.preview.backgroundContext)
     }
 }
 
