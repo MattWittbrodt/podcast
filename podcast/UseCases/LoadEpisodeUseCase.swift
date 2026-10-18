@@ -9,8 +9,8 @@ import Foundation
 import CoreData
 
 struct LoadEpisodeUseCase {
-    let episodeRepo: EpisodeRepository
-    let playbackUseCase: PlaybackUseCase
+    let episodeRepo: EpisodeRepositoryProtocol
+    let playbackUseCase: PlaybackUseCaseProtocol
 
     struct Output {
         let episode: EpisodeRecord

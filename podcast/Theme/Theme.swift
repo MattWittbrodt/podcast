@@ -25,6 +25,6 @@ struct Main: ThemeProtocol {
 //    var bodyTextColor: Color { return Color("mnBodyTextColor") }
 //    var textBoxColor: Color { return Color("mnTextBoxColor") }
     var primaryColor: Color { return Color("PrimaryThemeColor")}
-    var secondoryColor: Color { return Color("SecondaryThemeColor")}
+    var secondaryColor: Color { return Color("SecondaryThemeColor")}
     var textInputColor: Color { return Color("TextInputColor")}
 }

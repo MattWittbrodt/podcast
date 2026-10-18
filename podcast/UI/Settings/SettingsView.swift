@@ -27,6 +27,14 @@ enum SettingsAction: Identifiable {
     }
 }
 
+struct LogExportButton: View {
+    var body: some View {
+        ShareLink(item: PersistedLogger.shared.fileURL) {
+            Label("Export Debug Logs", systemImage: "square.and.arrow.up")
+        }
+    }
+}
+
 struct SettingsView: View {
     @EnvironmentObject private var themeManager: ThemeManager
     @Environment(DownloadManager.self) private var downloadManager
@@ -85,6 +93,9 @@ struct SettingsView: View {
             .onAppear {
                 viewModel.getLastUpdateTime()
             }
+            Section("Debugging") {
+                LogExportButton()
+            }
         }
         // This sheet appears whenever activeAction is not nil
         .sheet(item: $activeAction) { action in
@@ -100,7 +111,7 @@ struct SettingsView: View {
         }
         .scrollContentBackground(.hidden)
         .tint(themeManager.selectedTheme.primaryColor)
-        .background(themeManager.selectedTheme.secondoryColor)
+        .background(themeManager.selectedTheme.secondaryColor)
     }
 
     

@@ -34,7 +34,7 @@ struct SearcherView: View {
             } message: {
                 Text(alertMessage)
             }
-            .background(themeManager.selectedTheme.secondoryColor)
+            .background(themeManager.selectedTheme.secondaryColor)
     }
     
     private var content: some View {
@@ -101,7 +101,7 @@ struct SearcherView: View {
                 }
             }
             .buttonStyle(.borderedProminent)
-            .foregroundStyle(themeManager.selectedTheme.secondoryColor)
+            .foregroundStyle(themeManager.selectedTheme.secondaryColor)
             .tint(themeManager.selectedTheme.primaryColor)
         }
         .padding()
@@ -142,7 +142,7 @@ struct SearcherView: View {
                     await viewModel.parseRSSfeedIntoPodcast(searchResult.rssUrl())
                 }
             }
-            .background(themeManager.selectedTheme.secondoryColor)
+            .background(themeManager.selectedTheme.secondaryColor)
             .foregroundStyle(themeManager.selectedTheme.primaryColor)
             .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
             .listRowBackground(Color.clear)

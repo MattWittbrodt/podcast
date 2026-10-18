@@ -34,9 +34,9 @@ struct EpisodeRecord: Equatable {
     
     static func == (lhs: EpisodeRecord, rhs: EpisodeRecord) -> Bool {
         lhs.objectId == rhs.objectId &&
-        lhs.lastListened == rhs.lastListened &&
-        lhs.duration == rhs.duration &&
-        lhs.playbackRate == rhs.playbackRate
+        lhs.lastListened == rhs.lastListened //&&
+        //lhs.duration == rhs.duration &&
+        //lhs.playbackRate == rhs.playbackRate
     }
 }
 
@@ -48,8 +48,7 @@ extension EpisodeRecord {
     }
     
     func savedFileName() -> String {
-        let episodeTitle = self.episodeTitle.replacingOccurrences(of: "/", with: "-")
-        return "\(episodeTitle)-\(self.guid ?? "Default Guid")"
+        Episode.makeFileName(title: self.episodeTitle, guid: self.guid)
     }
     
     var formattedDate: String {
@@ -105,6 +104,38 @@ extension EpisodeRecord {
             manualDownload: false,
         )
     }
+    
+    static func makeSampleForTest(
+        title: String,
+        publishedDate: Date,
+        audioUrl: URL?,
+        context: NSManagedObjectContext?,
+    ) -> EpisodeRecord {
+        let context = context ?? PersistenceController.preview.container.viewContext
+        
+        let episode = Episode(context: context)
+        episode.title = "Preview Episode"
+        episode.duration = 3600
+        episode.lastListened = 120
+        try? context.save()
+        
+        return EpisodeRecord(
+            objectId: episode.objectID,
+            episodeTitle: title,
+            podcastTitle: "Preview Podcast",
+            playbackRate: 1.0,
+            duration: 3600,
+            lastListened: 120,
+            episodeDescription: "Episode Description",
+            audioUrl: audioUrl ?? URL(string: "Sampleaudio")!,
+            chapters: [],
+            guid: "sampleGuid",
+            imgData: nil,
+            publishedDate: publishedDate,
+            enclosureUrl: "EnclosureUrl",
+            manualDownload: false,
+        )
+    }
 }
 
 struct ChapterRecord {
@@ -112,4 +143,46 @@ struct ChapterRecord {
     let imageUrl: String?
     let startTime: Int16
     let chapterTitle: String
+}
+
+struct BookmarkRecord: Identifiable, Equatable {
+    var id: NSManagedObjectID { objectId }
+    let objectId: NSManagedObjectID
+    let savedDate: Date
+    let customLabel: String?
+    let audioFilePath: URL
+    let isAudioFromEpisode: Bool
+    let startTime: Double
+    let episodeId: NSManagedObjectID
+    let episodeTitle: String
+    let podcastTitle: String
+    let publishedDate: Date?
+    
+    static func == (lhs: BookmarkRecord, rhs: BookmarkRecord) -> Bool {
+        lhs.objectId == rhs.objectId
+    }
+}
+
+extension BookmarkRecord {
+    func savedFileName() -> String {
+        Bookmark.createSavedFileName(title: self.episodeTitle, startTime: self.startTime)
+    }
+    
+    static func makeSampleForTest(
+        bookmark: Bookmark,
+        episode: Episode
+    ) -> BookmarkRecord {
+        BookmarkRecord(
+            objectId: bookmark.objectID,
+            savedDate: Date.distantPast,
+            customLabel: bookmark.customLabel,
+            audioFilePath: URL(fileURLWithPath: "/dev/null"),
+            isAudioFromEpisode: true,
+            startTime: 10,
+            episodeId: episode.objectID,
+            episodeTitle: episode.title ?? "Episode Debug",
+            podcastTitle: "Tet Podcast Tile",
+            publishedDate: Date.distantPast
+        )
+    }
 }

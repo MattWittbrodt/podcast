@@ -9,7 +9,7 @@ import Foundation
 
 struct ProcessManualDownloadUseCase {
     let downloadManager: DownloadManager
-    let episodeRepository: EpisodeRepository
+    let episodeRepository: EpisodeRepositoryProtocol
 
     func execute(for episode: EpisodeRecord, manualOverride: Bool = false) throws {
         if downloadManager.stopCellularDownload() && !manualOverride {

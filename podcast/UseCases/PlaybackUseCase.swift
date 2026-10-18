@@ -13,9 +13,16 @@ enum PlaybackError: Error {
     case noAudioUrl
 }
 
-struct PlaybackUseCase {
+protocol PlaybackUseCaseProtocol {
+    func play(episode: EpisodeRecord)
+    func play(bookmark: BookmarkRecord)
+    func updateRate(_ rate: Float, for episode: EpisodeRecord)
+    func updateLastListened(for episode: EpisodeRecord, at time: TimeInterval) async
+}
+
+struct PlaybackUseCase: PlaybackUseCaseProtocol {
     let playbackManager: PlaybackManager
-    let episodeRepository: EpisodeRepository
+    let episodeRepository: EpisodeRepositoryProtocol
     let settingsRepository: SettingsRepository
     let podcastRepository: PodcastRepository
     
@@ -25,6 +32,10 @@ struct PlaybackUseCase {
             forwardSkip: Int64(settingsRepository.settings.forwardSkip),
             backwardSkip: Int64(settingsRepository.settings.backwardSkip)
         )
+    }
+    
+    func play(bookmark: BookmarkRecord) {
+        playbackManager.startPlayback(bookmark: bookmark)
     }
     
     func updateRate(_ rate: Float, for episode: EpisodeRecord) {

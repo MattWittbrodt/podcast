@@ -18,8 +18,8 @@ extension ManageSettingsUseCase {
 extension LoadEpisodeUseCase {
     static var preview: LoadEpisodeUseCase {
         LoadEpisodeUseCase(
-            episodeRepo: .preview,
-            playbackUseCase: .preview
+            episodeRepo: EpisodeRepository.preview,
+            playbackUseCase: PlaybackUseCase.preview
         )
     }
 }
@@ -48,7 +48,7 @@ extension SyncPodcastUseCase {
 extension ManageDownloadsUseCase {
     static var preview: ManageDownloadsUseCase {
         ManageDownloadsUseCase(
-            repository: .preview,
+            repository: EpisodeRepository.preview,
             downloadManager: DownloadManager()
         )
     }
@@ -57,7 +57,7 @@ extension ManageDownloadsUseCase {
 extension UpdateChaptersUseCase {
     static var preview: UpdateChaptersUseCase {
         UpdateChaptersUseCase(
-            repository: .preview,
+            repository: EpisodeRepository.preview,
         )
     }
 }
@@ -66,7 +66,7 @@ extension PlaybackUseCase {
     static var preview: PlaybackUseCase {
         PlaybackUseCase(
             playbackManager: PlaybackManager(),
-            episodeRepository: .preview,
+            episodeRepository: EpisodeRepository.preview,
             settingsRepository: .preview,
             podcastRepository: .preview
         )
@@ -77,7 +77,9 @@ extension SetEpisodeAsListenedUseCase {
     static var preview: SetEpisodeAsListenedUseCase {
         SetEpisodeAsListenedUseCase(
             downloadManager: DownloadManager(),
-            episodeRepository: .preview
+            episodeRepository: EpisodeRepository.preview,
+            bookmarkRepository: BookmarkRepository.preview,
+            createBookmarkClipUseCase: CreateBookmarkClipUseCase.preview
         )
     }
 }
@@ -86,7 +88,22 @@ extension ProcessManualDownloadUseCase {
     static var preview: ProcessManualDownloadUseCase {
         ProcessManualDownloadUseCase(
             downloadManager: DownloadManager(),
-            episodeRepository: .preview
+            episodeRepository: EpisodeRepository.preview
+        )
+    }
+}
+
+extension ManageBookmarksUseCase {
+    static var preview: ManageBookmarksUseCase {
+        ManageBookmarksUseCase(bookmarkRepository: BookmarkRepository.preview)
+    }
+}
+
+extension CreateBookmarkClipUseCase {
+    static var preview: CreateBookmarkClipUseCase {
+        CreateBookmarkClipUseCase(
+            bookmarkRepository: BookmarkRepository.preview,
+            filePathService: FilePathService()
         )
     }
 }

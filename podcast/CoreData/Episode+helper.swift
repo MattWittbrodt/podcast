@@ -188,9 +188,13 @@ extension Episode {
     }
     
     // Consolidates logic for the file name. Extension agnostic.
+    static func makeFileName(title: String?, guid: String?) -> String {
+        let episodeTitle = title?.replacingOccurrences(of: "/", with: "-") ?? "episode"
+        return "\(episodeTitle)-\(guid ?? "Default Guid")"
+    }
+    
     func savedFileName() -> String {
-        let episodeTitle = self.title?.replacingOccurrences(of: "/", with: "-") ?? "episode"
-        return "\(episodeTitle)-\(self.guid ?? "Default Guid")"
+        Episode.makeFileName(title: self.title, guid: self.guid)
     }
     
     var cleanedGuid: String {

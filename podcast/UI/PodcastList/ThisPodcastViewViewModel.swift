@@ -19,6 +19,7 @@ class PodcastViewModel {
     private let podcastRepository: PodcastRepository
     private let podcast: PodcastRecord
     private let loadEpisodeUseCase: LoadEpisodeUseCase
+    private let manageDownloadsUseCase: ManageDownloadsUseCase
         
     init(
         downloadManager: DownloadManager,
@@ -26,12 +27,14 @@ class PodcastViewModel {
         podcast: PodcastRecord,
         podcastRepository: PodcastRepository,
         loadEpisodeUseCase: LoadEpisodeUseCase,
+        manageDownloadsUseCase: ManageDownloadsUseCase
     ) {
         self.downloadManager = downloadManager
         self.playbackUseCase = playbackUseCase
         self.podcast = podcast
         self.podcastRepository = podcastRepository
         self.loadEpisodeUseCase = loadEpisodeUseCase
+        self.manageDownloadsUseCase = manageDownloadsUseCase
     }
     
     func markAllListened() {
@@ -53,6 +56,10 @@ class PodcastViewModel {
     func markEpisodeAsUnlistened(_ episode: EpisodeRecord) {
         //TODO
         //episodeRepository.markEpisodeAsUnlistened(episode)
+    }
+    
+    func episodeDownloadState(_ episode: EpisodeRecord) -> DownloadState {
+        manageDownloadsUseCase.episodeState(episode: episode)
     }
     
 //    func handleEpisodeSelection(_ episode: Episode) {

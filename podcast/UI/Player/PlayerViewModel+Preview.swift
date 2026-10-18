@@ -17,7 +17,7 @@ extension PlayerViewModel {
             playbackManager: PlaybackManager(),
             loadEpisodeUseCase: .preview,
             setEpisodeAsListenedUseCase: .preview,
-            playbackUseCase: .preview
+            playbackUseCase: PlaybackUseCase.preview
         )
         // Seed with fake data
         vm.currentEpisode = .preview

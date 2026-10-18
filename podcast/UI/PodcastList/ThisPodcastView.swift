@@ -7,9 +7,10 @@
 
 import SwiftUI
 
-struct PodcastView: View {
+struct ThisPodcastView: View {
     @State private var viewModel: PodcastViewModel
     @Environment(PlayerViewModel.self) var playerVM
+    @Environment(AppContainer.self) var container
     let podcast: PodcastRecord
     
     init(podcast: PodcastRecord, container: AppContainer) {
@@ -20,6 +21,7 @@ struct PodcastView: View {
             podcast: podcast,
             podcastRepository: container.podcastRepository,
             loadEpisodeUseCase: container.loadEpisodeUseCase,
+            manageDownloadsUseCase: container.manageDownloadsUseCase
         ))
     }
     
@@ -37,7 +39,10 @@ struct PodcastView: View {
         }
         List {
             ForEach(viewModel.episodes, id: \.objectId) { episode in
-                EpisodeListCard(episode: episode)
+                EpisodeListCard(
+                    episode: episode,
+                    downloadState: viewModel.episodeDownloadState(episode)
+                )
                     .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
                     .listRowBackground(Color.clear)
                     .swipeActions(edge: .trailing, allowsFullSwipe: false) {
@@ -46,6 +51,8 @@ struct PodcastView: View {
                     .onTapGesture {
                         Task {
                             await playerVM.selectEpisode(episode.objectId)
+                            // Set to unlistened
+                            // Start playing
                         }
                     }
             }

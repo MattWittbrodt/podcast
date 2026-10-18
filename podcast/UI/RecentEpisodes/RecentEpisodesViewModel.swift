@@ -55,23 +55,33 @@ class RecentEpisodesViewModel {
     // Watches and re-loads episodes
     func observeChanges(coordinator: NSPersistentStoreCoordinator) {
         NotificationCenter.default.addObserver(
-            forName: .NSPersistentStoreRemoteChange,
-            object: coordinator,
+            forName: .NSManagedObjectContextDidSave,
+            object: nil,
             queue: .main
         ) { [weak self] _ in
+            log("NSManagedObjectContextDidSave received")
             Task { @MainActor [weak self] in
-                self?.reloadTask?.cancel()
-                self?.reloadTask = Task {
-                    try? await Task.sleep(for: .seconds(0.5))
-                    guard !Task.isCancelled else { return }
-                    await self?.loadEpisodes()
-                }
+                self?.handleChangeNotification()
             }
+        }
+    }
+    
+    private func handleChangeNotification() {
+        // Debounce incoming saves so rapid successive saves don't cause multiple reloads
+        // or get dropped prematurely.
+        reloadTask?.cancel()
+        reloadTask = Task {
+            try? await Task.sleep(nanoseconds: 500_000_000) // 0.5s debounce
+            guard !Task.isCancelled else { return }
+            log("Reloading episodes from context save")
+            await loadEpisodes()
         }
     }
 
     func refresh() async {
         await refreshLibraryUseCase.execute(notifyUser: false)
+        await loadEpisodes()
+        log("RecentEpisodesViewModel refresh finished")
     }
     
     func manualDownloadSwipeAction(_ episode: EpisodeRecord) {
@@ -84,7 +94,12 @@ class RecentEpisodesViewModel {
     }
     
     func episodeListenedSwipeAction(_ episode: EpisodeRecord) async {
-        let _ = await setEpisodeAsListenedUseCase.execute(episode.objectId)
+        do {
+            let _ = try await setEpisodeAsListenedUseCase.execute(episode)
+            await loadEpisodes()
+        } catch {
+            print("Failed to mark listened: \(error)")
+        }
     }
     
     func selectEpisode(_ episode: EpisodeRecord) async {

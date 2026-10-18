@@ -27,7 +27,7 @@ protocol ThemeProtocol {
 //    var textBoxColor: Color { get }
     
     var primaryColor: Color { get }
-    var secondoryColor: Color { get}
+    var secondaryColor: Color { get}
     var textInputColor: Color { get }
     
 }

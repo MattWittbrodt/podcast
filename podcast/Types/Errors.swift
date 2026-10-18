@@ -47,3 +47,8 @@ enum RSSParserError: Error {
     case invalidUrl(String)
     case parseError(String)
 }
+
+enum BookmarkError: Error {
+    case episodeNotDownloaded
+    case exportFailed
+}

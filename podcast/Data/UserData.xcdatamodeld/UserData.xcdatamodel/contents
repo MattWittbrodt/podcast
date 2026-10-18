@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="24901" systemVersion="25F80" minimumToolsVersion="Automatic" sourceLanguage="Swift" usedWithSwiftData="YES" userDefinedModelVersionIdentifier="">
+<model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="24902" systemVersion="25F84" minimumToolsVersion="Automatic" sourceLanguage="Swift" usedWithSwiftData="YES" userDefinedModelVersionIdentifier="">
     <entity name="Bookmark" representedClassName="Bookmark" syncable="YES" codeGenerationType="class">
-        <attribute name="dateTime" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
-        <attribute name="startTime" optional="YES" attributeType="Integer 64" defaultValueString="0" usesScalarValueType="YES"/>
-        <relationship name="bookmarkEpisode" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Episode" inverseName="bookmark" inverseEntity="Episode"/>
+        <attribute name="customLabel" optional="YES" attributeType="String"/>
+        <attribute name="savedDate" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="startTime" attributeType="Double" defaultValueString="0" usesScalarValueType="YES"/>
+        <relationship name="bookmarkEpisode" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Episode" inverseName="bookmarks" inverseEntity="Episode"/>
     </entity>
     <entity name="Chapter" representedClassName="Chapter" syncable="YES" codeGenerationType="class">
         <attribute name="imageData" optional="YES" attributeType="Binary" allowsExternalBinaryDataStorage="YES"/>
@@ -11,10 +12,6 @@
         <attribute name="startTime" attributeType="Integer 16" defaultValueString="0" usesScalarValueType="YES"/>
         <attribute name="title" optional="YES" attributeType="String"/>
         <relationship name="episode" optional="YES" maxCount="1" deletionRule="Cascade" destinationEntity="Episode" inverseName="chapters" inverseEntity="Episode"/>
-    </entity>
-    <entity name="ChapterVersion" representedClassName="ChapterVersion" syncable="YES" codeGenerationType="class">
-        <attribute name="version" optional="YES" attributeType="String"/>
-        <relationship name="episodeChapterVer" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Episode" inverseName="chapterVer" inverseEntity="Episode"/>
     </entity>
     <entity name="Episode" representedClassName="Episode" syncable="YES" codeGenerationType="class">
         <attribute name="chaptersUrl" optional="YES" attributeType="String"/>
@@ -30,10 +27,9 @@
         <attribute name="publishedDate" attributeType="Date" usesScalarValueType="NO"/>
         <attribute name="title" optional="YES" attributeType="String"/>
         <attribute name="uuid" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
-        <relationship name="bookmark" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Bookmark" inverseName="bookmarkEpisode" inverseEntity="Bookmark"/>
+        <relationship name="bookmarks" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="Bookmark" inverseName="bookmarkEpisode" inverseEntity="Bookmark"/>
         <relationship name="chapters" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="Chapter" inverseName="episode" inverseEntity="Chapter"/>
-        <relationship name="chapterVer" optional="YES" maxCount="1" deletionRule="Cascade" destinationEntity="ChapterVersion" inverseName="episodeChapterVer" inverseEntity="ChapterVersion"/>
-        <relationship name="podcast" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Podcast" inverseName="episodes" inverseEntity="Podcast"/>
+        <relationship name="podcast" maxCount="1" deletionRule="Nullify" destinationEntity="Podcast" inverseName="episodes" inverseEntity="Podcast"/>
         <uniquenessConstraints>
             <uniquenessConstraint>
                 <constraint value="guid"/>

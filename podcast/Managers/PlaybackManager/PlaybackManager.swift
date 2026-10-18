@@ -77,11 +77,13 @@ class PlaybackManager {
             .store(in: &cancellables)
     }
     
+    // MARK: Playback Methods
     func startPlayback(
         episode: EpisodeRecord,
         forwardSkip: Int64,
         backwardSkip: Int64
     ) {
+        try? AVAudioSession.sharedInstance().setActive(true)
         self.cleanupPlayer()
         
         currentEpisode = episode
@@ -114,7 +116,60 @@ class PlaybackManager {
         player.play()
         player.rate = self.playbackRate
         isPlaying = true
-        setupRemoteTransportControls(backwardSkip: backwardSkip, forwardSkip: forwardSkip)
+        
+        // Waiting for the audio to be playing before setting up remote controls
+        Task { [weak self] in
+            guard let self else { return }
+            
+            // Poll until playing
+            var attempts = 0
+            while !Task.isCancelled && attempts < 30 {
+                if player.timeControlStatus == .playing {
+                    await MainActor.run {
+                        self.setupRemoteTransportControls(
+                            backwardSkip: backwardSkip,
+                            forwardSkip: forwardSkip
+                        )
+                    }
+                    break
+                }
+                try? await Task.sleep(for: .milliseconds(100))
+                attempts += 1
+            }
+        }
+        
+        setupNowPlayingInfo()
+    }
+    
+    func startPlayback(bookmark: BookmarkRecord) {
+        self.cleanupPlayer()
+        
+        let playerItem = AVPlayerItem(url: bookmark.audioFilePath)
+        player.replaceCurrentItem(with: playerItem)
+        
+        Task { [weak self] in
+                guard let self else { return }
+                
+                // Load duration directly from asset — more reliable than item.duration
+                let asset = playerItem.asset
+                do {
+                    let duration = try await asset.load(.duration)
+                    let seconds = duration.seconds
+                    if seconds.isFinite && seconds > 0 {
+                        await MainActor.run { self.duration = seconds }
+                    }
+                } catch {
+                    print("failed to load duration: \(error)")
+                }
+            }
+            
+        if bookmark.isAudioFromEpisode {
+            self.seek(to: bookmark.startTime - 3)
+        }
+        
+        player.play()
+        player.rate = 1
+        isPlaying = true
         
         setupNowPlayingInfo()
     }
@@ -135,7 +190,7 @@ extension PlaybackManager {
 
         switch player.timeControlStatus {
         case .playing, .waitingToPlayAtSpecifiedRate:
-            player.pause()
+            pause()
             isPlaying = false
         case .paused:
             player.rate = self.playbackRate
@@ -143,6 +198,20 @@ extension PlaybackManager {
         @unknown default:
             break
         }
+    }
+    
+    func pause() {
+        log("pause() called, player state before: \(player.timeControlStatus.rawValue)")
+        player.pause()
+        isPlaying = false
+        log("pause() finished, player state after: \(player.timeControlStatus.rawValue)")
+    }
+    
+    func resume() {
+        log("play called, player state before: \(player.timeControlStatus.rawValue)")
+        player.play()
+        player.rate = playbackRate
+        isPlaying = true
     }
     
     func skipForward(seconds: Int64) {

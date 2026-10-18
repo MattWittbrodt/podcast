@@ -14,10 +14,15 @@ final class AppContainer {
     let persistenceController: PersistenceController
     let backgroundContext: NSManagedObjectContext
     let downloadManager: DownloadManager
+    // Repositories
     let settingsRepository: SettingsRepository
     let episodeRepository: EpisodeRepository
     let podcastRepository: PodcastRepository
+    let bookmarkRepository: BookmarkRepository
+    // Managers
     let playbackManager: PlaybackManager
+    let bookmarkPlaybackManager: BookmarkPlaybackManager
+    // Use Cases
     let loadEpisodeUseCase: LoadEpisodeUseCase
     let playbackUseCase: PlaybackUseCase
     let syncPodcastUseCase: SyncPodcastUseCase
@@ -28,9 +33,14 @@ final class AppContainer {
     let setEpisodeAsListenedUseCase: SetEpisodeAsListenedUseCase
     let subscribeToPodcastUseCase: SubscribeToPodcastUseCase
     let manageSettingsUseCase: ManageSettingsUseCase
+    let manageBookmarksUseCase: ManageBookmarksUseCase
+    let createBookmarkClipUseCase: CreateBookmarkClipUseCase
+    // View Models
     let playerViewModel: PlayerViewModel
     let recentEpisodesViewModel: RecentEpisodesViewModel
     let discoveryManager: DiscoveryManager
+    let bookmarksViewModel: BookmarksViewModel
+    let podcastListViewModel: PodcastListViewModel
     
     @MainActor
     init(persistenceController: PersistenceController = .shared) {
@@ -55,8 +65,11 @@ final class AppContainer {
             viewContext: persistenceController.container.viewContext
         )
         
-        // MARK: Playback Manager
+        self.bookmarkRepository = BookmarkRepository(context: backgroundContext)
+        
+        // MARK: Playback Managers
         self.playbackManager = PlaybackManager()
+        self.bookmarkPlaybackManager = BookmarkPlaybackManager(playbackManager: playbackManager)
         
         // MARK: - Use Cases
         self.playbackUseCase = PlaybackUseCase(
@@ -96,9 +109,16 @@ final class AppContainer {
             episodeRepository: episodeRepository,
         )
         
+        self.createBookmarkClipUseCase = CreateBookmarkClipUseCase(
+            bookmarkRepository: bookmarkRepository,
+            filePathService: FilePathService()
+        )
+        
         self.setEpisodeAsListenedUseCase = SetEpisodeAsListenedUseCase(
             downloadManager: downloadManager,
-            episodeRepository: episodeRepository
+            episodeRepository: episodeRepository,
+            bookmarkRepository: bookmarkRepository,
+            createBookmarkClipUseCase: createBookmarkClipUseCase
         )
         
         self.subscribeToPodcastUseCase = SubscribeToPodcastUseCase(
@@ -108,6 +128,8 @@ final class AppContainer {
         )
         
         self.manageSettingsUseCase = ManageSettingsUseCase(repository: settingsRepository)
+        
+        self.manageBookmarksUseCase = ManageBookmarksUseCase(bookmarkRepository: bookmarkRepository)
         
         // MARK: - ViewModels
         self.playerViewModel = PlayerViewModel(
@@ -127,9 +149,20 @@ final class AppContainer {
             manageDownloadsUseCase: manageDownloadsUseCase
         )
         
+        self.bookmarksViewModel = BookmarksViewModel(
+            manageBookmarksUseCase: manageBookmarksUseCase,
+            bookmarkPlaybackManager: bookmarkPlaybackManager
+        )
+        
+        self.podcastListViewModel = PodcastListViewModel(
+            podcastRepository: podcastRepository,
+            subscribeToPodcastUseCase: subscribeToPodcastUseCase,
+            manageDownloadsUseCase: manageDownloadsUseCase
+        )
+        
         // Allows the observe changes for recent episodes to start observing with the coordinator
         // all repositories use
-        recentEpisodesViewModel.observeChanges(coordinator: persistenceController.container.persistentStoreCoordinator)//
+        recentEpisodesViewModel.observeChanges(coordinator: persistenceController.container.persistentStoreCoordinator)
         
         self.discoveryManager = DiscoveryManager()
         

@@ -66,7 +66,7 @@ struct ChapterListView: View {
                         .id(chapter.startTime)
                 }
             }
-            .background(Color(themeManager.selectedTheme.secondoryColor).opacity(0.85))
+            .background(Color(themeManager.selectedTheme.secondaryColor).opacity(0.85))
             .padding(.vertical)
         }
     }

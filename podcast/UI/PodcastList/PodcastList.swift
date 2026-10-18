@@ -8,26 +8,14 @@
 import SwiftUI
 
 struct PodcastList: View {
-    @State private var viewModel: PodcastListViewModel
     @EnvironmentObject private var themeManager: ThemeManager
     @Environment(PlayerViewModel.self) private var playerViewModel: PlayerViewModel
-    @Binding var showFullPlayer: Bool
-    
-    private let container: AppContainer
-    
-    init(
-        container: AppContainer,
-        showFullPlayer: Binding<Bool>
-    ) {
-        self.container = container
-        self._showFullPlayer = showFullPlayer
-        self._viewModel = State(wrappedValue: PodcastListViewModel(podcastRepository: container.podcastRepository))
-    }
-        
+    @Environment(AppContainer.self) private var container
+            
     var body: some View {
         NavigationStack{
             content
-                .background(Color(themeManager.selectedTheme.secondoryColor))
+                .background(Color(themeManager.selectedTheme.secondaryColor))
         }
     }
     
@@ -43,12 +31,11 @@ struct PodcastList: View {
     
     private func podcastList(in geometry: GeometryProxy) -> some View {
         List {
-            ForEach(viewModel.podcasts, id: \.objectId) { podcast in
+            ForEach(container.podcastListViewModel.podcasts, id: \.objectId) { podcast in
                 NavigationLink {
-                   PodcastView(
+                   ThisPodcastView(
                     podcast: podcast,
                     container: container,
-                    //showFullPlayer: $showFullPlayer,
                    )
                 } label: {
                     PodcastListCard(
@@ -65,14 +52,16 @@ struct PodcastList: View {
             }
         }
         .listStyle(.plain)
-        .background(themeManager.selectedTheme.secondoryColor)
+        .background(themeManager.selectedTheme.secondaryColor)
         .scrollContentBackground(.hidden)
     }
     
     private func swipeActions(for podcast: PodcastRecord) -> some View {
         HStack {
             Button(action: {
-                viewModel.unsuscribeFromPodcast(podcast)
+                Task {
+                    await container.podcastListViewModel.unsuscribeFromPodcast(podcast)
+                }
             }) {
                 Label("Unsuscribe", systemImage: "tray.fill")
             }
@@ -88,7 +77,7 @@ struct PodcastList: View {
             Spacer()
         }
         .foregroundStyle(themeManager.selectedTheme.primaryColor)
-        .background(Color(themeManager.selectedTheme.secondoryColor))
+        .background(Color(themeManager.selectedTheme.secondaryColor))
     }
 }
 //
